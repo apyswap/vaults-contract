@@ -1,0 +1,23 @@
+{
+  "name": "apyswap-vaults-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^3.4.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://YSavchenko@bitbucket.org/YSavchenko/apyswap-vaults-contract.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/YSavchenko/apyswap-vaults-contract#readme"
+}
