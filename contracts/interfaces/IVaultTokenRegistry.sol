@@ -21,7 +21,6 @@ interface IVaultTokenRegistry {
     function allowance(AddressParams memory addresses) external view returns (uint256);
     function approve(AddressParams memory addresses, uint256 amount) external returns (bool);
     function transferFrom(AddressParams memory addresses, uint256 amount) external returns (bool);
-    function valueOf(uint256 ethBalance, address[] calldata tokens) external view returns (uint256);
     function lockCount() external view returns (uint256);
     function lockInfo(uint256 index) external view returns (LockInfo memory);
 }

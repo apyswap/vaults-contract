@@ -71,12 +71,6 @@ contract VaultRegistry is IVaultTokenRegistry {
         return true;
     }
 
-    // Calculates approximate USD value of ethereum and token balances
-    function valueOf(uint256, address[] calldata) external override view returns (uint256) {
-        // TODO: Call etherscan router to get value of ethereum and tokens
-        return 0;
-    }
-
     function lockCount() external override view returns (uint256) {
         return _lockInfo.length;
     }
