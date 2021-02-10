@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.8.0;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
@@ -39,23 +40,58 @@ contract Vault is IERC20Upgradeable, Initializable {
     }
 
     function balanceOf(address account) external override view returns (uint256) {
-        return _tokenRegistry.balanceOf(address(this), account);
+        AddressParams memory addresses = AddressParams({
+            vault: address(this),
+            owner: account,
+            spender: address(0),
+            sender: address(0),
+            recipient: address(0)
+        });
+        return _tokenRegistry.balanceOf(addresses);
     }
 
     function transfer(address recipient, uint256 amount) external locked override returns (bool) {
-        return _tokenRegistry.transfer(address(this), msg.sender, recipient, amount);
+        AddressParams memory addresses = AddressParams({
+            vault: address(this),
+            owner: address(0),
+            spender: address(0),
+            sender: msg.sender,
+            recipient: recipient
+        });
+        return _tokenRegistry.transfer(addresses, amount);
     }
 
     function allowance(address owner, address spender) external override view returns (uint256) {
-        return _tokenRegistry.allowance(address(this), owner, spender);
+        AddressParams memory addresses = AddressParams({
+            vault: address(this),
+            owner: owner,
+            spender: spender,
+            sender: address(0),
+            recipient: address(0)
+        });
+        return _tokenRegistry.allowance(addresses);
     }
 
     function approve(address spender, uint256 amount) external locked override returns (bool) {
-        return _tokenRegistry.approve(address(this), msg.sender, spender, amount);
+        AddressParams memory addresses = AddressParams({
+            vault: address(this),
+            owner: msg.sender,
+            spender: spender,
+            sender: address(0),
+            recipient: address(0)
+        });
+        return _tokenRegistry.approve(addresses, amount);
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external locked override returns (bool) {
-        return _tokenRegistry.transferFrom(address(this), msg.sender, sender, recipient, amount);
+        AddressParams memory addresses = AddressParams({
+            vault: address(this),
+            owner: sender,
+            spender: msg.sender,
+            sender: sender,
+            recipient: recipient
+        });
+        return _tokenRegistry.transferFrom(addresses, amount);
     }
 
     function valueOf(address[] calldata tokens) external view returns (uint256) {

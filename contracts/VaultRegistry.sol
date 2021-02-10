@@ -47,32 +47,32 @@ contract VaultRegistry is IVaultTokenRegistry {
         return _accountVaults[user].at(index);
     }
 
-    function balanceOf(address vault_, address account) external override view returns (uint256) {
-        return _vaultAccountShare[vault_][account];
+    function balanceOf(AddressParams memory addresses) external override view returns (uint256) {
+        return _vaultAccountShare[addresses.vault][addresses.owner];
     }
 
-    function transfer(address vault_, address sender, address recipient, uint256 amount) external fromVault(vault_, sender) override returns (bool) {
-        _transfer(vault_, sender, recipient, amount);
+    function transfer(AddressParams memory addresses, uint256 amount) external fromVault(addresses.vault, addresses.sender) override returns (bool) {
+        _transfer(addresses, amount);
         return true;
     }
 
-    function allowance(address vault_, address owner, address spender) external override view returns (uint256) {
-        return _vaultAllowances[vault_][owner][spender];
+    function allowance(AddressParams memory addresses) external override view returns (uint256) {
+        return _vaultAllowances[addresses.vault][addresses.owner][addresses.spender];
     }
 
-    function approve(address vault_, address owner, address spender, uint256 amount) external fromVault(vault_, owner) override returns (bool) {
-        _approve(vault_, owner, spender, amount);
+    function approve(AddressParams memory addresses, uint256 amount) external fromVault(addresses.vault, addresses.owner) override returns (bool) {
+        _approve(addresses, amount);
         return true;
     }
 
-    function transferFrom(address vault_, address spender, address sender, address recipient, uint256 amount) external fromVault(vault_, sender) override returns (bool) {
-        _transfer(vault_, sender, recipient, amount);
-        _approve(vault_, sender, spender, _vaultAllowances[vault_][sender][spender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+    function transferFrom(AddressParams memory addresses, uint256 amount) external fromVault(addresses.vault, addresses.sender) override returns (bool) {
+        _transfer(addresses, amount);
+        _approve(addresses, _vaultAllowances[addresses.vault][addresses.owner][addresses.spender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
     // Calculates approximate USD value of ethereum and token balances
-    function valueOf(uint256 ethBalance, address[] calldata tokens) external override view returns (uint256) {
+    function valueOf(uint256, address[] calldata) external override view returns (uint256) {
         // TODO: Call etherscan router to get value of ethereum and tokens
         return 0;
     }
@@ -85,25 +85,27 @@ contract VaultRegistry is IVaultTokenRegistry {
         return _lockInfo[index];
     }
 
-    function _transfer(address vault_, address sender, address recipient, uint256 amount) internal {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+    function _transfer(AddressParams memory addresses, uint256 amount) internal {
+        require(addresses.sender != address(0), "ERC20: transfer from the zero address");
+        require(addresses.recipient != address(0), "ERC20: transfer to the zero address");
 
-        _vaultAccountShare[vault_][sender] = _vaultAccountShare[vault_][sender].sub(amount, "ERC20: transfer amount exceeds balance");
-        _vaultAccountShare[vault_][recipient] = _vaultAccountShare[vault_][recipient].add(amount);
+        _vaultAccountShare[addresses.vault][addresses.sender] = 
+            _vaultAccountShare[addresses.vault][addresses.sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _vaultAccountShare[addresses.vault][addresses.recipient] = 
+            _vaultAccountShare[addresses.vault][addresses.recipient].add(amount);
 
-        _updateOwnership(vault_, sender);
-        _updateOwnership(vault_, recipient);
+        _updateOwnership(addresses.vault, addresses.sender);
+        _updateOwnership(addresses.vault, addresses.recipient);
 
-        emit Transfer(vault_, sender, recipient, amount);
+        emit Transfer(addresses.vault, addresses.sender, addresses.recipient, amount);
     }
 
-    function _approve(address vault_, address owner, address spender, uint256 amount) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+    function _approve(AddressParams memory addresses, uint256 amount) internal {
+        require(addresses.owner != address(0), "ERC20: approve from the zero address");
+        require(addresses.spender != address(0), "ERC20: approve to the zero address");
 
-        _vaultAllowances[vault_][owner][spender] = amount;
-        emit Approval(vault_, owner, spender, amount);
+        _vaultAllowances[addresses.vault][addresses.owner][addresses.spender] = amount;
+        emit Approval(addresses.vault, addresses.owner, addresses.spender, amount);
     }
 
     function _updateOwnership(address vault_, address account) internal {

@@ -7,12 +7,20 @@ struct LockInfo {
     uint256 reward;   
 }
 
+struct AddressParams {
+    address vault;
+    address owner;
+    address spender;
+    address sender;
+    address recipient;
+}
+
 interface IVaultTokenRegistry {
-    function balanceOf(address vault, address account) external view returns (uint256);
-    function transfer(address vault, address sender, address recipient, uint256 amount) external returns (bool);
-    function allowance(address vault, address owner, address spender) external view returns (uint256);
-    function approve(address vault, address owner, address spender, uint256 amount) external returns (bool);
-    function transferFrom(address vault, address spender, address sender, address recipient, uint256 amount) external returns (bool);
+    function balanceOf(AddressParams memory addresses) external view returns (uint256);
+    function transfer(AddressParams memory addresses, uint256 amount) external returns (bool);
+    function allowance(AddressParams memory addresses) external view returns (uint256);
+    function approve(AddressParams memory addresses, uint256 amount) external returns (bool);
+    function transferFrom(AddressParams memory addresses, uint256 amount) external returns (bool);
     function valueOf(uint256 ethBalance, address[] calldata tokens) external view returns (uint256);
     function lockCount() external view returns (uint256);
     function lockInfo(uint256 index) external view returns (LockInfo memory);
