@@ -2,12 +2,12 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/IVaultTokenRegistry.sol";
 
-contract Vault is IERC20Upgradeable, Initializable {
+contract Vault is IERC20, Initializable {
 
     IVaultTokenRegistry _tokenRegistry;
     uint256 public lockedUntil;
@@ -101,7 +101,7 @@ contract Vault is IERC20Upgradeable, Initializable {
     function lock(address[] calldata tokens, uint256 lockTypeId) external neverlocked {
         LockInfo memory lockInfo = _tokenRegistry.lockInfo(lockTypeId);
         lockedUntil = block.timestamp + lockInfo.interval;
-        lockedValue = MathUpgradeable.max(_tokenRegistry.valueOf(address(this).balance, tokens), MAX_LOCKED_VALUE);
+        lockedValue = Math.max(_tokenRegistry.valueOf(address(this).balance, tokens), MAX_LOCKED_VALUE);
     }
 
     // Withdraw tokens according to the user's share, burn ownership token

@@ -2,19 +2,19 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/utils/EnumerableSetUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Vault.sol";
 import "./interfaces/IVaultTokenRegistry.sol";
 
 contract VaultRegistry is IVaultTokenRegistry {
-    using SafeMathUpgradeable for uint256;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using SafeMath for uint256;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     LockInfo[] private _lockInfo;
 
-    mapping(address => EnumerableSetUpgradeable.AddressSet) private _accountVaults;
+    mapping(address => EnumerableSet.AddressSet) private _accountVaults;
     mapping(address => mapping(address => uint256)) private _vaultAccountShare;
     mapping(address => mapping(address => mapping(address => uint256))) private _vaultAllowances;
 
