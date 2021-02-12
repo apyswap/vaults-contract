@@ -65,6 +65,11 @@ contract VaultRegistry is IVaultTokenRegistry {
         return true;
     }
 
+    function burn(AddressParams memory addresses, uint256 amount) external fromVault(addresses.vault, addresses.sender) override returns (bool) {
+        _burn(addresses, amount);
+        return true;
+    }
+
     function transferFrom(AddressParams memory addresses, uint256 amount) external fromVault(addresses.vault, addresses.sender) override returns (bool) {
         _transfer(addresses, amount);
         _approve(addresses, _vaultAllowances[addresses.vault][addresses.owner][addresses.spender].sub(amount, "ERC20: transfer amount exceeds allowance"));
@@ -100,6 +105,13 @@ contract VaultRegistry is IVaultTokenRegistry {
 
         _vaultAllowances[addresses.vault][addresses.owner][addresses.spender] = amount;
         emit Approval(addresses.vault, addresses.owner, addresses.spender, amount);
+    }
+
+    function _burn(AddressParams memory addresses, uint256 amount) internal virtual {
+        require(addresses.sender != address(0), "ERC20: burn from the zero address");
+
+        _vaultAccountShare[addresses.vault][addresses.sender] = _vaultAccountShare[addresses.vault][addresses.sender].sub(amount, "ERC20: burn amount exceeds balance");
+        emit Transfer(addresses.vault, addresses.sender, address(0), amount);
     }
 
     function _updateOwnership(address vault_, address account) internal {

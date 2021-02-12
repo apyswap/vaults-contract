@@ -20,6 +20,7 @@ interface IVaultTokenRegistry {
     function transfer(AddressParams memory addresses, uint256 amount) external returns (bool);
     function allowance(AddressParams memory addresses) external view returns (uint256);
     function approve(AddressParams memory addresses, uint256 amount) external returns (bool);
+    function burn(AddressParams memory addresses, uint256 amount) external returns (bool);
     function transferFrom(AddressParams memory addresses, uint256 amount) external returns (bool);
     function lockCount() external view returns (uint256);
     function lockInfo(uint256 index) external view returns (LockInfo memory);

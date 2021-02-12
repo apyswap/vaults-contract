@@ -3,6 +3,7 @@ pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -17,7 +18,7 @@ struct TokenInfo {
     uint256 balance;
 }
 
-interface IERC20EX is IERC20 {
+interface IERC20Ex is IERC20 {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
@@ -26,6 +27,7 @@ interface IERC20EX is IERC20 {
 contract Vault is IERC20 {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using SafeERC20 for IERC20;
 
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
@@ -162,7 +164,7 @@ contract Vault is IERC20 {
     }
 
     function token(uint256 index) external view returns (TokenInfo memory) {
-        IERC20EX tokenInterface = IERC20EX(_tokens.at(index));
+        IERC20Ex tokenInterface = IERC20Ex(_tokens.at(index));
         return TokenInfo({
             contractAddress: address(tokenInterface),
             name: tokenInterface.name(),
@@ -186,16 +188,24 @@ contract Vault is IERC20 {
         if (share == 0) {
             return;
         }
-        // TODO: Burn ownership token
+        // Burn ownership token
+        AddressParams memory addresses = AddressParams({
+            vault: address(this),
+            owner: address(0),
+            spender: address(0),
+            sender: msg.sender,
+            recipient: address(0)
+        });
+        require(_tokenRegistry.burn(addresses, share), "!burn");
 
         // Transfer ETH
         _safeEthWithdraw(msg.sender, _calculateShareBalance(share, address(this).balance));
 
+        // Transfer tokens
         for (uint256 index = 0; index < _tokens.length(); index++) {
-            address tokenAddress = _tokens.at(index);
-            // TODO: Transfer token
+            IERC20 tokenContract = IERC20(_tokens.at(index));
+            tokenContract.safeTransfer(msg.sender, _calculateShareBalance(share, tokenContract.balanceOf(address(this))));
         }
-        
     }
 
     function _calculateShareBalance(uint256 share, uint256 balance) internal pure returns (uint256) {
