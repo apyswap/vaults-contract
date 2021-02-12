@@ -34,7 +34,7 @@ contract VaultRegistry is IVaultTokenRegistry {
     }
 
     function createVault() public {
-        Vault vault = new Vault();
+        Vault vault = new Vault(this);
         _vaultAccountShare[address(vault)][msg.sender] = 1 ether;
         _accountVaults[msg.sender].add(address(vault));
     }
