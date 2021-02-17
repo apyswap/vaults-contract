@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.4.0",
-    "@openzeppelin/truffle-upgrades": "^1.5.0"
+    "@openzeppelin/truffle-upgrades": "^1.5.0",
+    "@truffle/contract": "^4.3.7",
+    "@uniswap/v2-core": "^1.0.1"
   },
   "devDependencies": {},
   "scripts": {

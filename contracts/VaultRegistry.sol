@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "./Vault.sol";
 import "./interfaces/IVaultTokenRegistry.sol";
 
@@ -14,6 +15,8 @@ contract VaultRegistry is IVaultTokenRegistry {
 
     LockInfo[] private _lockInfo;
 
+    IUniswapV2Factory private _uniswapFactory;
+
     mapping(address => EnumerableSet.AddressSet) private _accountVaults;
     mapping(address => mapping(address => uint256)) private _vaultAccountShare;
     mapping(address => mapping(address => mapping(address => uint256))) private _vaultAllowances;
@@ -21,7 +24,9 @@ contract VaultRegistry is IVaultTokenRegistry {
     event Transfer(address indexed vault, address indexed from, address indexed to, uint256 value);
     event Approval(address indexed vault, address indexed owner, address indexed spender, uint256 value);
 
-    constructor() public {
+    constructor(IUniswapV2Factory uniswapFactory) public {
+        _uniswapFactory = uniswapFactory;
+
         _lockInfo.push(LockInfo({interval: 1 minutes, reward: 0}));
         _lockInfo.push(LockInfo({interval: 5 minutes, reward: 10}));
         _lockInfo.push(LockInfo({interval: 10 minutes, reward: 20}));
@@ -121,5 +126,9 @@ contract VaultRegistry is IVaultTokenRegistry {
         } else if (balance == 0) {
             _accountVaults[account].remove(vault_);
         }
+    }
+
+    function uniswapFactory() external override view returns (IUniswapV2Factory) {
+        return _uniswapFactory;
     }
 }

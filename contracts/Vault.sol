@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/IVaultTokenRegistry.sol";
 
 struct TokenInfo {
@@ -16,6 +18,11 @@ struct TokenInfo {
     string symbol;
     uint8 decimals;
     uint256 balance;
+}
+
+struct TokenValueInfo {
+    uint256 timestamp;
+    uint256 cumulativePrice;
 }
 
 interface IERC20Ex is IERC20 {
@@ -36,6 +43,7 @@ contract Vault is IERC20 {
     uint256 public lockedUntil;
     uint256 public lockedValue;
     EnumerableSet.AddressSet private _tokens;
+    mapping( address => TokenValueInfo ) private _tokenValues;
 
     uint256 constant MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
     uint256 constant TOTAL_SHARE = 1 ether;
@@ -150,7 +158,40 @@ contract Vault is IERC20 {
         if (balance == 0) {
             return 0;
         }
-        // TODO: Return USDT equivalent of token balance from the params
+        if (token == USDT) {
+            return balance;
+        }
+
+        TokenValueInfo storage pastInfo = _tokenValues[token];
+        if (pastInfo.cumulativePrice == 0) {
+            return 0;
+        }
+
+        uint256 cumulativePrice = _getLastCumulativePrice(token);
+        if (cumulativePrice == 0 || cumulativePrice <= pastInfo.cumulativePrice) {
+            return 0;
+        }
+        if (block.timestamp <= pastInfo.timestamp) {
+            return 0;
+        }
+
+        return cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance).div(block.timestamp.sub(pastInfo.timestamp));
+    }
+
+    function _getLastCumulativePrice(address token) internal view returns (uint256) {
+        IUniswapV2Pair pair = IUniswapV2Pair(_tokenRegistry.uniswapFactory().getPair(token, WETH));
+        if (address(pair) == address(0)) {
+            // Pair does not exist
+            return 0;
+        }
+        if (pair.token0() == token) {
+            return pair.price0CumulativeLast();
+        }
+        if (pair.token1() == token) {
+            return pair.price1CumulativeLast();
+        }
+        // Something went wrong, return 0
+        return 0;
     }
 
     function lock(uint256 lockTypeId) external neverlocked {
@@ -176,10 +217,16 @@ contract Vault is IERC20 {
 
     function addToken(address token_) external shareOwner {
         _tokens.add(token_);
+
+        _tokenValues[token_] = TokenValueInfo({
+            timestamp: block.timestamp,
+            cumulativePrice: _getLastCumulativePrice(token_)
+        });
     }
 
     function removeToken(address token_) external shareOwner {
         _tokens.remove(token_);
+        delete _tokenValues[token_];
     }
 
     // Withdraw tokens according to the user's share, burn ownership token
