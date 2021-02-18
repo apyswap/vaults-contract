@@ -21,11 +21,21 @@ contract Vault is IERC20 {
     uint256 public lockedUntil;
     uint256 public lockedValue;
 
+    uint256 private _totalSupply = 0;
+    mapping(address => uint256) private _accountShare;
+    mapping(address => mapping(address => uint256)) private _allowances;
+
     uint256 constant MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
     uint256 constant TOTAL_SHARE = 1 ether;
 
-    constructor(IVaultRegistry vaultRegistry, ITokenRegistry tokenRegistry) public {
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    constructor(address shareOwner, IVaultRegistry vaultRegistry, ITokenRegistry tokenRegistry) public {
+        _mint(shareOwner, TOTAL_SHARE);
+
         lockedUntil = 0;
+        
         _vaultRegistry = vaultRegistry;
         _tokenRegistry = tokenRegistry;
     }
@@ -48,7 +58,7 @@ contract Vault is IERC20 {
     receive() external payable {}
 
     function totalSupply() external override view returns (uint256) {
-        return TOTAL_SHARE;
+        return _totalSupply;
     }
 
     function balanceOf(address account) external override view returns (uint256) {
@@ -56,58 +66,27 @@ contract Vault is IERC20 {
     }
 
     function _balanceOf(address account) internal view returns (uint256) {
-        AddressParams memory addresses = AddressParams({
-            vault: address(this),
-            owner: account,
-            spender: address(0),
-            sender: address(0),
-            recipient: address(0)
-        });
-        return _vaultRegistry.balanceOf(addresses);
+        return _accountShare[account];
     }
 
     function transfer(address recipient, uint256 amount) external locked override returns (bool) {
-        AddressParams memory addresses = AddressParams({
-            vault: address(this),
-            owner: address(0),
-            spender: address(0),
-            sender: msg.sender,
-            recipient: recipient
-        });
-        return _vaultRegistry.transfer(addresses, amount);
+        _transfer(msg.sender, recipient, amount);
+        return true;
     }
 
     function allowance(address owner, address spender) external override view returns (uint256) {
-        AddressParams memory addresses = AddressParams({
-            vault: address(this),
-            owner: owner,
-            spender: spender,
-            sender: address(0),
-            recipient: address(0)
-        });
-        return _vaultRegistry.allowance(addresses);
+        return _allowances[owner][spender];
     }
 
     function approve(address spender, uint256 amount) external locked override returns (bool) {
-        AddressParams memory addresses = AddressParams({
-            vault: address(this),
-            owner: msg.sender,
-            spender: spender,
-            sender: address(0),
-            recipient: address(0)
-        });
-        return _vaultRegistry.approve(addresses, amount);
+        _approve(msg.sender, spender, amount);
+        return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external locked override returns (bool) {
-        AddressParams memory addresses = AddressParams({
-            vault: address(this),
-            owner: sender,
-            spender: msg.sender,
-            sender: sender,
-            recipient: recipient
-        });
-        return _vaultRegistry.transferFrom(addresses, amount);
+        _transfer(sender, recipient, amount);
+        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "!allowance"));
+        return true;
     }
 
     function valueOf() external view returns (uint256) {
@@ -144,14 +123,7 @@ contract Vault is IERC20 {
             return;
         }
         // Burn ownership token
-        AddressParams memory addresses = AddressParams({
-            vault: address(this),
-            owner: address(0),
-            spender: address(0),
-            sender: msg.sender,
-            recipient: address(0)
-        });
-        require(_vaultRegistry.burn(addresses, share), "!burn");
+        _burn(msg.sender, share);
 
         // Transfer ETH
         _safeEthWithdraw(msg.sender, _calculateShareBalance(share, address(this).balance));
@@ -171,4 +143,41 @@ contract Vault is IERC20 {
         (bool success, ) = to.call{ value: amount }("");
         require(success, "!ethWithdraw");
     }
+
+    function _transfer(address sender, address recipient, uint256 amount) internal {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+
+        _accountShare[sender] = _accountShare[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _accountShare[recipient] = _accountShare[recipient].add(amount);
+
+        _vaultRegistry.updateOwnership(this, sender, recipient);
+
+        emit Transfer(sender, recipient, amount);
+    }
+    
+    function _approve(address owner, address spender, uint256 amount) internal {
+        require(owner != address(0), "ERC20: approve from the zero address");
+        require(spender != address(0), "ERC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: mint to the zero address");
+
+        _totalSupply = _totalSupply.add(amount);
+        _accountShare[account] = _accountShare[account].add(amount);
+        emit Transfer(address(0), account, amount);
+    }
+
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: burn from the zero address");
+
+        _accountShare[account] = _accountShare[account].sub(amount, "ERC20: burn amount exceeds balance");
+        _totalSupply = _totalSupply.sub(amount);
+        emit Transfer(account, address(0), amount);
+    }
+
 }
