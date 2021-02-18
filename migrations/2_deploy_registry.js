@@ -6,7 +6,8 @@ UniswapV2Factory.setProvider(this.web3._provider);
 
 module.exports = async function (deployer, network, accounts) {
   let uniswapFactoryAddress;
-  if (deployer.network == "ganache") {
+  console.log(deployer.network);
+  if (deployer.network == "ganache" || deployer.network == "development") {
     // Deploy Uniswap and create test pairs
     await deployer.deploy(UniswapV2Factory, accounts[0], {from: accounts[0]});
     uniswapFactoryAddress = (await UniswapV2Factory.deployed()).address;

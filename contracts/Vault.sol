@@ -12,38 +12,14 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/IVaultTokenRegistry.sol";
 
-struct TokenInfo {
-    address contractAddress;
-    string name;
-    string symbol;
-    uint8 decimals;
-    uint256 balance;
-}
-
-struct TokenValueInfo {
-    uint256 timestamp;
-    uint256 cumulativePrice;
-}
-
-interface IERC20Ex is IERC20 {
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
-    function decimals() external view returns (uint8);
-}
-
 contract Vault is IERC20 {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
-    address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-
     IVaultTokenRegistry _tokenRegistry;
     uint256 public lockedUntil;
     uint256 public lockedValue;
-    EnumerableSet.AddressSet private _tokens;
-    mapping( address => TokenValueInfo ) private _tokenValues;
 
     uint256 constant MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
     uint256 constant TOTAL_SHARE = 1 ether;
@@ -140,11 +116,11 @@ contract Vault is IERC20 {
     function _valueOf() internal view returns (uint256) {
         uint256 value = 0;
         // Calculate ETH equivalent
-        value = value.add(_tokenValue(WETH, address(this).balance));
+        value = value.add(_tokenRegistry.tokenValue(_tokenRegistry.WETH(), address(this).balance));
         // Add value of other tokens from _tokens
-        for (uint256 index = 0; index < _tokens.length(); index++) {
-            address tokenAddress = _tokens.at(index);
-            value = value.add(_tokenValue(tokenAddress, _tokenBalance(tokenAddress)));
+        for (uint256 index = _tokenRegistry.tokensCount() - 1; index >= 0; index--) {
+            address tokenAddress = _tokenRegistry.tokenAddress(index);
+            value = value.add(_tokenRegistry.tokenValue(tokenAddress, _tokenBalance(tokenAddress)));
         }
         return value;
     }
@@ -154,79 +130,10 @@ contract Vault is IERC20 {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function _tokenValue(address token, uint256 balance) internal view returns (uint256) {
-        if (balance == 0) {
-            return 0;
-        }
-        if (token == USDT) {
-            return balance;
-        }
-
-        TokenValueInfo storage pastInfo = _tokenValues[token];
-        if (pastInfo.cumulativePrice == 0) {
-            return 0;
-        }
-
-        uint256 cumulativePrice = _getLastCumulativePrice(token);
-        if (cumulativePrice == 0 || cumulativePrice <= pastInfo.cumulativePrice) {
-            return 0;
-        }
-        if (block.timestamp <= pastInfo.timestamp) {
-            return 0;
-        }
-
-        return cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance).div(block.timestamp.sub(pastInfo.timestamp));
-    }
-
-    function _getLastCumulativePrice(address token) internal view returns (uint256) {
-        IUniswapV2Pair pair = IUniswapV2Pair(_tokenRegistry.uniswapFactory().getPair(token, WETH));
-        if (address(pair) == address(0)) {
-            // Pair does not exist
-            return 0;
-        }
-        if (pair.token0() == token) {
-            return pair.price0CumulativeLast();
-        }
-        if (pair.token1() == token) {
-            return pair.price1CumulativeLast();
-        }
-        // Something went wrong, return 0
-        return 0;
-    }
-
     function lock(uint256 lockTypeId) external neverlocked {
         LockInfo memory lockInfo = _tokenRegistry.lockInfo(lockTypeId);
         lockedUntil = block.timestamp + lockInfo.interval;
         lockedValue = Math.max(_valueOf(), MAX_LOCKED_VALUE);
-    }
-
-    function tokensCount() external view returns (uint256) {
-        return _tokens.length();
-    }
-
-    function token(uint256 index) external view returns (TokenInfo memory) {
-        IERC20Ex tokenInterface = IERC20Ex(_tokens.at(index));
-        return TokenInfo({
-            contractAddress: address(tokenInterface),
-            name: tokenInterface.name(),
-            symbol: tokenInterface.symbol(),
-            decimals: tokenInterface.decimals(),
-            balance: tokenInterface.balanceOf(address(this))
-        });
-    }
-
-    function addToken(address token_) external shareOwner {
-        _tokens.add(token_);
-
-        _tokenValues[token_] = TokenValueInfo({
-            timestamp: block.timestamp,
-            cumulativePrice: _getLastCumulativePrice(token_)
-        });
-    }
-
-    function removeToken(address token_) external shareOwner {
-        _tokens.remove(token_);
-        delete _tokenValues[token_];
     }
 
     // Withdraw tokens according to the user's share, burn ownership token
@@ -249,8 +156,8 @@ contract Vault is IERC20 {
         _safeEthWithdraw(msg.sender, _calculateShareBalance(share, address(this).balance));
 
         // Transfer tokens
-        for (uint256 index = 0; index < _tokens.length(); index++) {
-            IERC20 tokenContract = IERC20(_tokens.at(index));
+        for (uint256 index = _tokenRegistry.tokensCount() - 1; index >= 0; index--) {
+            IERC20 tokenContract = IERC20(_tokenRegistry.tokenAddress(index));
             tokenContract.safeTransfer(msg.sender, _calculateShareBalance(share, tokenContract.balanceOf(address(this))));
         }
     }

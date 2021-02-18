@@ -9,6 +9,14 @@ struct LockInfo {
     uint256 reward;   
 }
 
+struct TokenInfo {
+    address contractAddress;
+    string name;
+    string symbol;
+    uint8 decimals;
+    uint256 balance;
+}
+
 struct AddressParams {
     address vault;
     address owner;
@@ -18,6 +26,10 @@ struct AddressParams {
 }
 
 interface IVaultTokenRegistry {
+
+    function WETH() external pure returns (address);
+    function USDT() external pure returns (address);
+
     function balanceOf(AddressParams memory addresses) external view returns (uint256);
     function transfer(AddressParams memory addresses, uint256 amount) external returns (bool);
     function allowance(AddressParams memory addresses) external view returns (uint256);
@@ -28,4 +40,8 @@ interface IVaultTokenRegistry {
     function lockInfo(uint256 index) external view returns (LockInfo memory);
 
     function uniswapFactory() external view returns (IUniswapV2Factory);
+
+    function tokenValue(address token_, uint256 balance) external view returns (uint256);
+    function tokensCount() external view returns (uint256);
+    function tokenAddress(uint256 index) external view returns (address);
 }
