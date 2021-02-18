@@ -1,4 +1,5 @@
 const VaultRegistry = artifacts.require("VaultRegistry");
+const TokenRegistry = artifacts.require("TokenRegistry");
 const contract = require('@truffle/contract');
 const UniswapV2Factory = contract(require('@uniswap/v2-core/build/UniswapV2Factory.json'));
 
@@ -15,5 +16,6 @@ module.exports = async function (deployer, network, accounts) {
   } else {
     uniswapFactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
   }
-  await deployer.deploy(VaultRegistry, uniswapFactoryAddress);
+  await deployer.deploy(TokenRegistry, uniswapFactoryAddress);
+  await deployer.deploy(VaultRegistry, (await TokenRegistry.deployed()).address);
 };

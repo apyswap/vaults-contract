@@ -8,24 +8,25 @@ import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "./interfaces/IVaultTokenRegistry.sol";
+import "./interfaces/IVaultRegistry.sol";
+import "./interfaces/ITokenRegistry.sol";
 
 contract Vault is IERC20 {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
-    IVaultTokenRegistry _tokenRegistry;
+    IVaultRegistry _vaultRegistry;
+    ITokenRegistry _tokenRegistry;
     uint256 public lockedUntil;
     uint256 public lockedValue;
 
     uint256 constant MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
     uint256 constant TOTAL_SHARE = 1 ether;
 
-    constructor(IVaultTokenRegistry tokenRegistry) public {
+    constructor(IVaultRegistry vaultRegistry, ITokenRegistry tokenRegistry) public {
         lockedUntil = 0;
+        _vaultRegistry = vaultRegistry;
         _tokenRegistry = tokenRegistry;
     }
 
@@ -62,7 +63,7 @@ contract Vault is IERC20 {
             sender: address(0),
             recipient: address(0)
         });
-        return _tokenRegistry.balanceOf(addresses);
+        return _vaultRegistry.balanceOf(addresses);
     }
 
     function transfer(address recipient, uint256 amount) external locked override returns (bool) {
@@ -73,7 +74,7 @@ contract Vault is IERC20 {
             sender: msg.sender,
             recipient: recipient
         });
-        return _tokenRegistry.transfer(addresses, amount);
+        return _vaultRegistry.transfer(addresses, amount);
     }
 
     function allowance(address owner, address spender) external override view returns (uint256) {
@@ -84,7 +85,7 @@ contract Vault is IERC20 {
             sender: address(0),
             recipient: address(0)
         });
-        return _tokenRegistry.allowance(addresses);
+        return _vaultRegistry.allowance(addresses);
     }
 
     function approve(address spender, uint256 amount) external locked override returns (bool) {
@@ -95,7 +96,7 @@ contract Vault is IERC20 {
             sender: address(0),
             recipient: address(0)
         });
-        return _tokenRegistry.approve(addresses, amount);
+        return _vaultRegistry.approve(addresses, amount);
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external locked override returns (bool) {
@@ -106,7 +107,7 @@ contract Vault is IERC20 {
             sender: sender,
             recipient: recipient
         });
-        return _tokenRegistry.transferFrom(addresses, amount);
+        return _vaultRegistry.transferFrom(addresses, amount);
     }
 
     function valueOf() external view returns (uint256) {
@@ -131,7 +132,7 @@ contract Vault is IERC20 {
     }
 
     function lock(uint256 lockTypeId) external neverlocked {
-        LockInfo memory lockInfo = _tokenRegistry.lockInfo(lockTypeId);
+        LockInfo memory lockInfo = _vaultRegistry.lockInfo(lockTypeId);
         lockedUntil = block.timestamp + lockInfo.interval;
         lockedValue = Math.max(_valueOf(), MAX_LOCKED_VALUE);
     }
@@ -150,7 +151,7 @@ contract Vault is IERC20 {
             sender: msg.sender,
             recipient: address(0)
         });
-        require(_tokenRegistry.burn(addresses, share), "!burn");
+        require(_vaultRegistry.burn(addresses, share), "!burn");
 
         // Transfer ETH
         _safeEthWithdraw(msg.sender, _calculateShareBalance(share, address(this).balance));
