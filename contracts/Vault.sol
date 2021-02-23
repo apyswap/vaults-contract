@@ -97,8 +97,10 @@ contract Vault is IERC20 {
         uint256 value = 0;
         // Calculate ETH equivalent
         value = value.add(_tokenRegistry.tokenValue(_tokenRegistry.WETH(), address(this).balance));
-        // Add value of other tokens from _tokens
-        for (uint256 index = _tokenRegistry.tokensCount() - 1; index >= 0; index--) {
+        // Add value of other tokens
+        uint256 index = _tokenRegistry.tokensCount();
+        while (index > 0) {
+            index -= 1;
             address tokenAddress = _tokenRegistry.tokenAddress(index);
             value = value.add(_tokenRegistry.tokenValue(tokenAddress, _tokenBalance(tokenAddress)));
         }
