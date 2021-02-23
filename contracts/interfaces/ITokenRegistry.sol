@@ -7,7 +7,6 @@ struct TokenInfo {
     string name;
     string symbol;
     uint8 decimals;
-    uint256 balance;
 }
 
 interface ITokenRegistry {

@@ -59,15 +59,14 @@ contract TokenRegistry is ITokenRegistry, Ownable {
         }
     }
 
-    function token(uint256 index, address vault_) external view returns (TokenInfo memory) {
+    function token(uint256 index) external view returns (TokenInfo memory) {
         IERC20Ex tokenInterface = IERC20Ex(_tokenAddress(index));
         
         return TokenInfo({
             contractAddress: address(tokenInterface),
             name: tokenInterface.name(),
             symbol: tokenInterface.symbol(),
-            decimals: tokenInterface.decimals(),
-            balance: tokenInterface.balanceOf(vault_)
+            decimals: tokenInterface.decimals()
         });
     }
 
