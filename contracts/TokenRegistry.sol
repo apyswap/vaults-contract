@@ -24,11 +24,11 @@ interface IERC20Ex is IERC20 {
 contract TokenRegistry is ITokenRegistry, Ownable {
     using SafeMath for uint256;
 
-    address constant USDT_ = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address constant WETH_ = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private _tokenUSDT;
+    address private _tokenWETH;
 
-    function USDT() external override pure returns (address) { return USDT_; }
-    function WETH() external override pure returns (address) { return WETH_; }
+    function USDT() external override view returns (address) { return _tokenUSDT; }
+    function WETH() external override view returns (address) { return _tokenWETH; }
 
     IUniswapV2Factory private _uniswapFactory;
     
@@ -38,9 +38,12 @@ contract TokenRegistry is ITokenRegistry, Ownable {
     EnumerableSet.AddressSet private _stables;
     mapping( address => TokenValueInfo ) private _tokenValues;
 
-    constructor(IUniswapV2Factory uniswapFactory) public {
+    constructor(IUniswapV2Factory uniswapFactory, address tokenUSDT, address tokenWETH) public {
         _uniswapFactory = uniswapFactory;
-        _addToken(WETH_, false);
+        _tokenUSDT = tokenUSDT;
+        _tokenWETH = tokenWETH;
+        _addToken(_tokenUSDT, true);
+        _addToken(_tokenWETH, false);
     }
 
     function tokensCount() external override view returns (uint256) {
@@ -119,7 +122,7 @@ contract TokenRegistry is ITokenRegistry, Ownable {
     }
 
     function _getLastCumulativePrice(address token_) internal view returns (uint256) {
-        address pairAddress = _uniswapFactory.getPair(token_, USDT_);
+        address pairAddress = _uniswapFactory.getPair(token_, _tokenUSDT);
         if (pairAddress == address(0)) {
             // Pair does not exist
             return 0;

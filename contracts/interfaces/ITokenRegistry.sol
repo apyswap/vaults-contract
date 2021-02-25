@@ -10,8 +10,8 @@ struct TokenInfo {
 }
 
 interface ITokenRegistry {
-    function WETH() external pure returns (address);
-    function USDT() external pure returns (address);
+    function WETH() external view returns (address);
+    function USDT() external view returns (address);
     function tokenValue(address token_, uint256 balance) external view returns (uint256);
     function tokensCount() external view returns (uint256);
     function tokenAddress(uint256 index) external view returns (address);
