@@ -82,10 +82,7 @@ contract TokenRegistry is ITokenRegistry, Ownable {
             _stables.add(token_);
         } else {
             _tokens.add(token_);
-            _tokenValues[token_] = TokenValueInfo({
-                timestamp: block.timestamp,
-                cumulativePrice: _getLastCumulativePrice(token_)
-            });
+            _tokenValues[token_] = _getTokenValueInfo(token_);
         }
     }
 
@@ -110,31 +107,39 @@ contract TokenRegistry is ITokenRegistry, Ownable {
             return 0;
         }
 
-        uint256 cumulativePrice = _getLastCumulativePrice(token_);
-        if (cumulativePrice == 0 || cumulativePrice <= pastInfo.cumulativePrice) {
+        TokenValueInfo memory valueInfo = _getTokenValueInfo(token_);
+        if (valueInfo.cumulativePrice == 0 || valueInfo.cumulativePrice <= pastInfo.cumulativePrice) {
             return 0;
         }
-        if (block.timestamp <= pastInfo.timestamp) {
+        if (valueInfo.timestamp <= pastInfo.timestamp) {
             return 0;
         }
 
-        return cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance).div(block.timestamp.sub(pastInfo.timestamp));
+        return valueInfo.cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance)
+            .div(valueInfo.timestamp.sub(pastInfo.timestamp));
     }
 
-    function _getLastCumulativePrice(address token_) internal view returns (uint256) {
+    function _getTokenValueInfo(address token_) internal view returns (TokenValueInfo memory info) {
         address pairAddress = _uniswapFactory.getPair(token_, _tokenUSDT);
         if (pairAddress == address(0)) {
             // Pair does not exist
-            return 0;
+            return info;
         }
         IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+        uint112 reserve0;
+        uint112 reserve1;
+        (reserve0, reserve1, info.timestamp) = pair.getReserves();
+        if (reserve0 == 0 || reserve1 == 0) {
+            return info;
+        }
         if (pair.token0() == token_) {
-            return pair.price0CumulativeLast();
+            info.cumulativePrice = pair.price0CumulativeLast();
         }
-        if (pair.token1() == token_) {
-            return pair.price1CumulativeLast();
+        else if (pair.token1() == token_) {
+            info.cumulativePrice = pair.price1CumulativeLast();
+        } else {
+            // Something went wrong, return 0
+            return info;
         }
-        // Something went wrong, return 0
-        return 0;
     }
 }

@@ -131,7 +131,9 @@ contract Vault is IERC20 {
         _safeEthWithdraw(msg.sender, _calculateShareBalance(share, address(this).balance));
 
         // Transfer tokens
-        for (uint256 index = _tokenRegistry.tokensCount() - 1; index >= 0; index--) {
+        uint256 index = _tokenRegistry.tokensCount();
+        while (index > 0) {
+            index -= 1;
             IERC20 tokenContract = IERC20(_tokenRegistry.tokenAddress(index));
             tokenContract.safeTransfer(msg.sender, _calculateShareBalance(share, tokenContract.balanceOf(address(this))));
         }
