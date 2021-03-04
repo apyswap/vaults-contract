@@ -24,6 +24,8 @@ interface IERC20Ex is IERC20 {
 contract TokenRegistry is ITokenRegistry, Ownable {
     using SafeMath for uint256;
 
+    uint224 private constant Q112 = 2**112;
+
     address private _tokenUSDT;
     address private _tokenWETH;
 
@@ -115,7 +117,7 @@ contract TokenRegistry is ITokenRegistry, Ownable {
             return 0;
         }
 
-        return valueInfo.cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance)
+        return valueInfo.cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance).div(Q112)
             .div(valueInfo.timestamp.sub(pastInfo.timestamp));
     }
 

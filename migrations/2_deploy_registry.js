@@ -51,9 +51,6 @@ module.exports = async function (deployer, network, accounts) {
     await time.increase(5);
     await pair.sync({from: accounts[0]});
 
-    console.log((await pair.price0CumulativeLast()).toString());
-    console.log((await pair.price1CumulativeLast()).toString());
-
     await time.increase(5);
     
   } else {
@@ -66,7 +63,5 @@ module.exports = async function (deployer, network, accounts) {
   if (deployer.network == "ganache" || deployer.network == "development") {
     await time.increase(5);
     await pair.sync({from: accounts[0]});
-    console.log((await pair.price0CumulativeLast()).toString());
-    console.log((await pair.price1CumulativeLast()).toString());
   }
 };
