@@ -173,6 +173,9 @@ contract Vault is IERC20 {
 
         _totalSupply = _totalSupply.add(amount);
         _accountShare[account] = _accountShare[account].add(amount);
+
+        _vaultRegistry.updateOwnership(this, address(0), account);
+
         emit Transfer(address(0), account, amount);
     }
 
@@ -181,6 +184,9 @@ contract Vault is IERC20 {
 
         _accountShare[account] = _accountShare[account].sub(amount, "ERC20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);
+
+        _vaultRegistry.updateOwnership(this, account, address(0));
+
         emit Transfer(account, address(0), amount);
     }
 

@@ -57,10 +57,10 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     function updateOwnership(IERC20 vault_, address sender, address recipient) external override {
         require(_accountVaults[sender].contains(address(vault_)), "!vault");
-        if (vault_.balanceOf(sender) == 0) {
+        if (sender != address(0) && vault_.balanceOf(sender) == 0) {
             _accountVaults[sender].remove(address(vault_));
         }
-        if (vault_.balanceOf(recipient) > 0) {
+        if (recipient != address(0) && vault_.balanceOf(recipient) > 0) {
             _accountVaults[recipient].add(address(vault_));
         }
     }
