@@ -11,8 +11,13 @@ struct LockInfo {
 
 interface IVaultRegistry {
 
+    function tokenReward() external view returns (IERC20);
+    function startTime() external view returns (uint256);
+    function finishTime() external view returns (uint256);
+
     function lockCount() external view returns (uint256);
     function lockInfo(uint256 index) external view returns (LockInfo memory);
 
-    function updateOwnership(IERC20 vault_, address sender, address recipient) external;
+    function updateOwnership(address sender, address recipient) external;
+    function getLockReward(uint256 lockIndex, uint256 value) external;
 }

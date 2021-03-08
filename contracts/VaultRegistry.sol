@@ -15,36 +15,57 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     LockInfo[] private _lockInfo;
 
-    ITokenRegistry _tokenRegistry;
+    ITokenRegistry public tokenRegistry;
 
+    IERC20 public override tokenReward;
+    uint256 public rewardTotal;
+    uint256 public rewardAvailable; 
+
+    uint256 public override startTime;
+    uint256 public override finishTime;
+
+    EnumerableSet.AddressSet private _vaults;
     mapping(address => EnumerableSet.AddressSet) private _accountVaults;
     
-    constructor(ITokenRegistry tokenRegistry) public {
+    constructor(ITokenRegistry tokenRegistry_, uint256 startTime_, uint256 finishTime_) public {
 
-        _tokenRegistry = tokenRegistry;
+        tokenRegistry = tokenRegistry_;
+        startTime = startTime_;
+        finishTime = finishTime_;
 
         _lockInfo.push(LockInfo({interval: 1 minutes, reward: 0}));
         _lockInfo.push(LockInfo({interval: 5 minutes, reward: 10}));
         _lockInfo.push(LockInfo({interval: 10 minutes, reward: 20}));
     }
 
-    modifier fromVault(address vault_, address owner) {
-        require(vault_ == msg.sender, "!vault");
-        require(_accountVaults[owner].contains(vault_), "!owner");
-        _;
-    }
-
     function createVault() public {
-        Vault vault = new Vault(msg.sender, this, _tokenRegistry);
+        require(block.timestamp > startTime && block.timestamp < finishTime, "!active");
+        Vault vault = new Vault(msg.sender, this, tokenRegistry);
+        _vaults.add(address(vault));
         _accountVaults[msg.sender].add(address(vault));
     }
 
-    function vaultCount(address user) public view returns (uint256) {
+    function setReward(IERC20 token, uint256 amount) external onlyOwner {
+        tokenReward = token;
+        token.transferFrom(msg.sender, address(this), amount);
+        rewardTotal += amount;
+        rewardAvailable += amount;
+    }
+
+    function vaultCount(address user) external view returns (uint256) {
         return _accountVaults[user].length();
     }
 
-    function vault(address user, uint256 index) public view returns (address) {
+    function vault(address user, uint256 index) external view returns (address) {
         return _accountVaults[user].at(index);
+    }
+
+    function globalVaultCount() external view returns (uint256) {
+        return _vaults.length();
+    }
+
+    function globalVault(uint256 index) external view returns (address) {
+        return _vaults.at(index);
     }
 
     function lockCount() external override view returns (uint256) {
@@ -55,13 +76,20 @@ contract VaultRegistry is Ownable, IVaultRegistry {
         return _lockInfo[index];
     }
 
-    function updateOwnership(IERC20 vault_, address sender, address recipient) external override {
-        require(_accountVaults[sender].contains(address(vault_)), "!vault");
+    function updateOwnership(address sender, address recipient) external override {
+        require(_vaults.contains(msg.sender), "!vault");
+        IERC20 vault_ = IERC20(msg.sender);
         if (sender != address(0) && vault_.balanceOf(sender) == 0) {
             _accountVaults[sender].remove(address(vault_));
         }
         if (recipient != address(0) && vault_.balanceOf(recipient) > 0) {
             _accountVaults[recipient].add(address(vault_));
         }
+    }
+
+    function getLockReward(uint256 lockIndex, uint256 value) external override {
+        require(_vaults.contains(msg.sender), "!vault");
+        uint256 reward = value.mul(_lockInfo[lockIndex].reward).div(100);
+        tokenReward.transfer(msg.sender, reward);
     }
 }

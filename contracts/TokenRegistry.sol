@@ -48,7 +48,7 @@ contract TokenRegistry is ITokenRegistry, Ownable {
         _addToken(_tokenWETH, false);
     }
 
-    function tokensCount() external override view returns (uint256) {
+    function tokenCount() external override view returns (uint256) {
         return _tokens.length() + _stables.length();
     }
 

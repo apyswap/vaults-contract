@@ -10,3 +10,7 @@ contract USDT is ERC20PresetFixedSupply {
 contract WETH is ERC20PresetFixedSupply {
     constructor() public ERC20PresetFixedSupply("Wrapped Ethereum", "WETH", 1000000 ether, msg.sender) {}
 }
+
+contract RewardToken is ERC20PresetFixedSupply {
+    constructor() public ERC20PresetFixedSupply("APYSwap", "APYS", 1000000 ether, msg.sender) {}
+}

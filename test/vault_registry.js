@@ -24,7 +24,7 @@ contract("VaultRegistry", async accounts => {
 
         tokenRegistry = await TokenRegistry.new(uniswapV2Factory.address, tokenUSDT.address, tokenWETH.address);
 
-        vaultRegistry = await VaultRegistry.new(tokenRegistry.address);
+        vaultRegistry = await VaultRegistry.new(tokenRegistry.address, 0, "" + Number.MAX_SAFE_INTEGER);
     });
 
     it("success: initialization", async () => {

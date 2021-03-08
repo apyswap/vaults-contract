@@ -42,7 +42,7 @@ contract("TokenRegistry", async accounts => {
     });
 
     it("success: initialization", async () => {
-        assert.equal(await tokenRegistry.tokensCount.call(), 2);
+        assert.equal(await tokenRegistry.tokenCount.call(), 2);
     });
 
     it("success: token info", async () => {

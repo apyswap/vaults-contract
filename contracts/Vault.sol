@@ -89,16 +89,16 @@ contract Vault is IERC20 {
         return true;
     }
 
-    function valueOf() external view returns (uint256) {
-        return _valueOf();
+    function totalValue() external view returns (uint256) {
+        return _totalValue();
     }
 
-    function _valueOf() internal view returns (uint256) {
+    function _totalValue() internal view returns (uint256) {
         uint256 value = 0;
         // Calculate ETH equivalent
         value = value.add(_tokenRegistry.tokenValue(_tokenRegistry.WETH(), address(this).balance));
         // Add value of other tokens
-        uint256 index = _tokenRegistry.tokensCount();
+        uint256 index = _tokenRegistry.tokenCount();
         while (index > 0) {
             index -= 1;
             address tokenAddress = _tokenRegistry.tokenAddress(index);
@@ -115,7 +115,8 @@ contract Vault is IERC20 {
     function lock(uint256 lockTypeId) external neverlocked {
         LockInfo memory lockInfo = _vaultRegistry.lockInfo(lockTypeId);
         lockedUntil = block.timestamp + lockInfo.interval;
-        lockedValue = Math.max(_valueOf(), MAX_LOCKED_VALUE);
+        lockedValue = Math.max(_totalValue(), MAX_LOCKED_VALUE);
+        _vaultRegistry.getLockReward(lockTypeId, lockedValue);
     }
 
     // Withdraw tokens according to the user's share, burn ownership token
@@ -128,19 +129,25 @@ contract Vault is IERC20 {
         _burn(msg.sender, share);
 
         // Transfer ETH
-        _safeEthWithdraw(msg.sender, _calculateShareBalance(share, address(this).balance));
+        _safeEthWithdraw(msg.sender, _calculateShareBalanceAfterBurn(share, address(this).balance));
 
         // Transfer tokens
-        uint256 index = _tokenRegistry.tokensCount();
+        // Number of tokens is controlled by the TokenRegistry owner be careful not to increase it, otherwise this transaction can fail
+        uint256 index = _tokenRegistry.tokenCount();
         while (index > 0) {
             index -= 1;
             IERC20 tokenContract = IERC20(_tokenRegistry.tokenAddress(index));
-            tokenContract.safeTransfer(msg.sender, _calculateShareBalance(share, tokenContract.balanceOf(address(this))));
+            tokenContract.safeTransfer(msg.sender, _calculateShareBalanceAfterBurn(share, tokenContract.balanceOf(address(this))));
         }
+
+        // Transfer reward tokens
+        IERC20 rewardContract = _vaultRegistry.tokenReward();
+        rewardContract.safeTransfer(msg.sender, _calculateShareBalanceAfterBurn(share, rewardContract.balanceOf(address(this))));
     }
 
-    function _calculateShareBalance(uint256 share, uint256 balance) internal pure returns (uint256) {
-        return balance.mul(share).div(TOTAL_SHARE);
+    function _calculateShareBalanceAfterBurn(uint256 share, uint256 balance) internal view returns (uint256) {
+        // We add share to _totalSupply because this function gets called after the share is burned
+        return balance.mul(share).div(_totalSupply.add(share));
     }
 
     function _safeEthWithdraw(address to, uint256 amount) internal {
@@ -155,7 +162,7 @@ contract Vault is IERC20 {
         _accountShare[sender] = _accountShare[sender].sub(amount, "ERC20: transfer amount exceeds balance");
         _accountShare[recipient] = _accountShare[recipient].add(amount);
 
-        _vaultRegistry.updateOwnership(this, sender, recipient);
+        _vaultRegistry.updateOwnership(sender, recipient);
 
         emit Transfer(sender, recipient, amount);
     }
@@ -174,8 +181,6 @@ contract Vault is IERC20 {
         _totalSupply = _totalSupply.add(amount);
         _accountShare[account] = _accountShare[account].add(amount);
 
-        _vaultRegistry.updateOwnership(this, address(0), account);
-
         emit Transfer(address(0), account, amount);
     }
 
@@ -185,9 +190,8 @@ contract Vault is IERC20 {
         _accountShare[account] = _accountShare[account].sub(amount, "ERC20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);
 
-        _vaultRegistry.updateOwnership(this, account, address(0));
+        _vaultRegistry.updateOwnership(account, address(0));
 
         emit Transfer(account, address(0), amount);
     }
-
 }

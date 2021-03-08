@@ -5,6 +5,7 @@ const UniswapV2Factory = contract(require('@uniswap/v2-core/build/UniswapV2Facto
 const UniswapV2Pair = contract(require('@uniswap/v2-core/build/UniswapV2Pair.json'));
 const USDT = artifacts.require('USDT');
 const WETH = artifacts.require('WETH');
+const RewardToken = artifacts.require('RewardToken');
 require('@openzeppelin/test-helpers/configure')({
   provider: web3._provider,
   singletons: {
@@ -15,7 +16,6 @@ const { time } = require('@openzeppelin/test-helpers');
 
 UniswapV2Factory.setProvider(web3._provider);
 UniswapV2Pair.setProvider(web3._provider);
-
 
 module.exports = async function (deployer, network, accounts) {
   let uniswapFactoryAddress;
@@ -58,10 +58,23 @@ module.exports = async function (deployer, network, accounts) {
     tokenWETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
   }
   await deployer.deploy(TokenRegistry, uniswapFactoryAddress, tokenUSDTAddress, tokenWETHAddress);
-  await deployer.deploy(VaultRegistry, (await TokenRegistry.deployed()).address);
+  await deployer.deploy(VaultRegistry, (await TokenRegistry.deployed()).address, 0, "" + Number.MAX_SAFE_INTEGER);
 
   if (deployer.network == "ganache" || deployer.network == "development") {
     await time.increase(5);
     await pair.sync({from: accounts[0]});
+  }
+
+  // Configure reward tokens
+  
+  if (deployer.network != "mainnet") {
+    await deployer.deploy(RewardToken);
+    let tokenReward = await RewardToken.deployed();
+
+    let tokenRewardAddress = tokenReward.address;
+    let vaultRegistry = await VaultRegistry.deployed();
+    let amount = web3.utils.toWei("100000");
+    await tokenReward.approve(vaultRegistry.address, amount);
+    await vaultRegistry.setReward(tokenRewardAddress, amount);
   }
 };
