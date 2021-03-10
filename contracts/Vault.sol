@@ -18,6 +18,7 @@ contract Vault is IERC20 {
 
     IVaultRegistry _vaultRegistry;
     ITokenRegistry _tokenRegistry;
+    uint256 public lockedSince;
     uint256 public lockedUntil;
     uint256 public lockedValue;
 
@@ -34,8 +35,6 @@ contract Vault is IERC20 {
     constructor(address shareOwner, IVaultRegistry vaultRegistry, ITokenRegistry tokenRegistry) public {
         _mint(shareOwner, TOTAL_SHARE);
 
-        lockedUntil = 0;
-        
         _vaultRegistry = vaultRegistry;
         _tokenRegistry = tokenRegistry;
     }
@@ -114,6 +113,7 @@ contract Vault is IERC20 {
 
     function lock(uint256 lockTypeId) external neverlocked {
         LockInfo memory lockInfo = _vaultRegistry.lockInfo(lockTypeId);
+        lockedSince = block.timestamp;
         lockedUntil = block.timestamp + lockInfo.interval;
         lockedValue = Math.max(_totalValue(), MAX_LOCKED_VALUE);
         _vaultRegistry.getLockReward(lockTypeId, lockedValue);

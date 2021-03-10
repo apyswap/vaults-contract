@@ -1,4 +1,5 @@
 const TokenRegistry = artifacts.require("TokenRegistry");
+const UniswapValueOracle = artifacts.require("UniswapValueOracle");
 const truffle_contract = require('@truffle/contract');
 const UniswapV2Factory = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Factory.json'));
 const UniswapV2Pair = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Pair.json'));
@@ -9,6 +10,7 @@ const { time } = require('@openzeppelin/test-helpers');
 contract("TokenRegistry", async accounts => {
 
     let uniswapV2Factory;
+    let valueOracle;
     let tokenRegistry;
     let tokenUSDT;
     let tokenWETH;
@@ -35,7 +37,9 @@ contract("TokenRegistry", async accounts => {
         await time.increase(5);
         await pair.sync({from: accounts[0]});
 
-        tokenRegistry = await TokenRegistry.new(uniswapV2Factory.address, tokenUSDT.address, tokenWETH.address);
+        valueOracle = await UniswapValueOracle.new(uniswapV2Factory.address, tokenUSDT.address);
+
+        tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address);
 
         await time.increase(5);
         await pair.sync({from: accounts[0]});

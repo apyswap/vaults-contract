@@ -6,14 +6,8 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/ITokenRegistry.sol";
-
-struct TokenValueInfo {
-    uint256 timestamp;
-    uint256 cumulativePrice;
-}
+import "./interfaces/IValueOracle.sol";
 
 interface IERC20Ex is IERC20 {
     function name() external view returns (string memory);
@@ -23,8 +17,7 @@ interface IERC20Ex is IERC20 {
 
 contract TokenRegistry is ITokenRegistry, Ownable {
     using SafeMath for uint256;
-
-    uint224 private constant Q112 = 2**112;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     address private _tokenUSDT;
     address private _tokenWETH;
@@ -32,16 +25,13 @@ contract TokenRegistry is ITokenRegistry, Ownable {
     function USDT() external override view returns (address) { return _tokenUSDT; }
     function WETH() external override view returns (address) { return _tokenWETH; }
 
-    IUniswapV2Factory private _uniswapFactory;
+    IValueOracle private _valueOracle;
     
-    using EnumerableSet for EnumerableSet.AddressSet;
-
     EnumerableSet.AddressSet private _tokens;
     EnumerableSet.AddressSet private _stables;
-    mapping( address => TokenValueInfo ) private _tokenValues;
 
-    constructor(IUniswapV2Factory uniswapFactory, address tokenUSDT, address tokenWETH) public {
-        _uniswapFactory = uniswapFactory;
+    constructor(IValueOracle valueOracle, address tokenUSDT, address tokenWETH) public {
+        _valueOracle = valueOracle;
         _tokenUSDT = tokenUSDT;
         _tokenWETH = tokenWETH;
         _addToken(_tokenUSDT, true);
@@ -84,7 +74,7 @@ contract TokenRegistry is ITokenRegistry, Ownable {
             _stables.add(token_);
         } else {
             _tokens.add(token_);
-            _tokenValues[token_] = _getTokenValueInfo(token_);
+            _valueOracle.updateValue(token_);
         }
     }
 
@@ -104,44 +94,6 @@ contract TokenRegistry is ITokenRegistry, Ownable {
             return balance;
         }
 
-        TokenValueInfo storage pastInfo = _tokenValues[token_];
-        if (pastInfo.cumulativePrice == 0) {
-            return 0;
-        }
-
-        TokenValueInfo memory valueInfo = _getTokenValueInfo(token_);
-        if (valueInfo.cumulativePrice == 0 || valueInfo.cumulativePrice <= pastInfo.cumulativePrice) {
-            return 0;
-        }
-        if (valueInfo.timestamp <= pastInfo.timestamp) {
-            return 0;
-        }
-
-        return valueInfo.cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance).div(Q112)
-            .div(valueInfo.timestamp.sub(pastInfo.timestamp));
-    }
-
-    function _getTokenValueInfo(address token_) internal view returns (TokenValueInfo memory info) {
-        address pairAddress = _uniswapFactory.getPair(token_, _tokenUSDT);
-        if (pairAddress == address(0)) {
-            // Pair does not exist
-            return info;
-        }
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-        uint112 reserve0;
-        uint112 reserve1;
-        (reserve0, reserve1, info.timestamp) = pair.getReserves();
-        if (reserve0 == 0 || reserve1 == 0) {
-            return info;
-        }
-        if (pair.token0() == token_) {
-            info.cumulativePrice = pair.price0CumulativeLast();
-        }
-        else if (pair.token1() == token_) {
-            info.cumulativePrice = pair.price1CumulativeLast();
-        } else {
-            // Something went wrong, return 0
-            return info;
-        }
+        return _valueOracle.getCurrentValue(token_, balance);
     }
 }

@@ -1,5 +1,6 @@
 const VaultRegistry = artifacts.require("VaultRegistry");
 const TokenRegistry = artifacts.require("TokenRegistry");
+const UniswapValueOracle = artifacts.require("UniswapValueOracle");
 const contract = require('@truffle/contract');
 const UniswapV2Factory = contract(require('@uniswap/v2-core/build/UniswapV2Factory.json'));
 const UniswapV2Pair = contract(require('@uniswap/v2-core/build/UniswapV2Pair.json'));
@@ -57,7 +58,10 @@ module.exports = async function (deployer, network, accounts) {
     tokenUSDTAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
     tokenWETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
   }
-  await deployer.deploy(TokenRegistry, uniswapFactoryAddress, tokenUSDTAddress, tokenWETHAddress);
+
+  await deployer.deploy(UniswapValueOracle, uniswapFactoryAddress, tokenUSDTAddress);
+  await deployer.deploy(TokenRegistry, (await UniswapValueOracle.deployed()).address, 
+    tokenUSDTAddress, tokenWETHAddress);
   await deployer.deploy(VaultRegistry, (await TokenRegistry.deployed()).address, 0, "" + Number.MAX_SAFE_INTEGER);
 
   if (deployer.network == "ganache" || deployer.network == "development") {
