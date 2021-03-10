@@ -5,7 +5,7 @@ const UniswapV2Factory = truffle_contract(require('@uniswap/v2-core/build/Uniswa
 const UniswapV2Pair = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Pair.json'));
 const USDT = artifacts.require("USDT");
 const WETH = artifacts.require("WETH");
-const { time } = require('@openzeppelin/test-helpers');    
+const { time } = require('@openzeppelin/test-helpers');
 
 contract("TokenRegistry", async accounts => {
 
