@@ -6,12 +6,14 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./Vault.sol";
 import "./interfaces/IVaultRegistry.sol";
 
 contract VaultRegistry is Ownable, IVaultRegistry {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using SafeERC20 for IERC20;
 
     LockInfo[] private _lockInfo;
 
@@ -47,9 +49,9 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     function setReward(IERC20 token, uint256 amount) external onlyOwner {
         tokenReward = token;
-        token.transferFrom(msg.sender, address(this), amount);
-        rewardTotal += amount;
-        rewardAvailable += amount;
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        rewardTotal = rewardTotal.add(amount);
+        rewardAvailable = rewardAvailable.add(amount);
     }
 
     function vaultCount(address user) external view returns (uint256) {
@@ -90,6 +92,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     function getLockReward(uint256 lockIndex, uint256 value) external override {
         require(_vaults.contains(msg.sender), "!vault");
         uint256 reward = value.mul(_lockInfo[lockIndex].reward).div(100);
-        tokenReward.transfer(msg.sender, reward);
+        rewardAvailable = rewardAvailable.sub(reward);
+        tokenReward.safeTransfer(msg.sender, reward);
     }
 }
