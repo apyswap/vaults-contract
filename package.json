@@ -11,17 +11,19 @@
     "@openzeppelin/test-helpers": "^0.5.10",
     "@openzeppelin/truffle-upgrades": "^1.5.0",
     "@truffle/contract": "^4.3.7",
-    "@uniswap/v2-core": "^1.0.1"
+    "@truffle/hdwallet-provider": "^1.2.2",
+    "@uniswap/v2-core": "^1.0.1",
+    "dotenv": "^8.2.0"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "truffle test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://YSavchenko@bitbucket.org/YSavchenko/apyswap-vaults-contract.git"
+    "url": "https://github.com/apyswap/vaults-contract.git"
   },
   "author": "",
-  "license": "ISC",
-  "homepage": "https://bitbucket.org/YSavchenko/apyswap-vaults-contract#readme"
+  "license": "MIT",
+  "homepage": "https://github.com/apyswap/vaults-contract"
 }
