@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./interfaces/IVaultRegistry.sol";
 import "./interfaces/ITokenRegistry.sol";
 
-contract Vault is IERC20 {
+contract Vault is IERC20, Initializable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -22,17 +22,21 @@ contract Vault is IERC20 {
     uint256 public lockedUntil;
     uint256 public lockedValue;
 
-    uint256 private _totalSupply = 0;
+    uint256 private _totalSupply;
     mapping(address => uint256) private _accountShare;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    uint256 constant MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
-    uint256 constant TOTAL_SHARE = 1 ether;
+    uint256 constant private MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
+    uint256 constant private TOTAL_SHARE = 1 ether;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor(address shareOwner, IVaultRegistry vaultRegistry, ITokenRegistry tokenRegistry) public {
+    constructor() public {
+        // Empty constructor, use initialize
+    }
+
+    function initialize(address shareOwner, IVaultRegistry vaultRegistry, ITokenRegistry tokenRegistry) external initializer {
         _mint(shareOwner, TOTAL_SHARE);
 
         _vaultRegistry = vaultRegistry;
@@ -50,7 +54,7 @@ contract Vault is IERC20 {
     }
 
     modifier shareOwner() {
-        require(_balanceOf(msg.sender) == TOTAL_SHARE, "!shareOwner");
+        require(_balanceOf(msg.sender) == TOTAL_SHARE, "!share owner");
         _;
     }
 
@@ -152,14 +156,14 @@ contract Vault is IERC20 {
 
     function _safeEthWithdraw(address to, uint256 amount) internal {
         (bool success, ) = to.call{ value: amount }("");
-        require(success, "!ethWithdraw");
+        require(success, "eth withdraw");
     }
 
     function _transfer(address sender, address recipient, uint256 amount) internal {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), "transfer from zero");
+        require(recipient != address(0), "transfer to zero");
 
-        _accountShare[sender] = _accountShare[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _accountShare[sender] = _accountShare[sender].sub(amount, "transfer amount");
         _accountShare[recipient] = _accountShare[recipient].add(amount);
 
         _vaultRegistry.updateOwnership(sender, recipient);
@@ -168,15 +172,15 @@ contract Vault is IERC20 {
     }
     
     function _approve(address owner, address spender, uint256 amount) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), "approve from zero");
+        require(spender != address(0), "approve to zero");
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
     function _mint(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: mint to the zero address");
+        require(account != address(0), "mint to zero");
 
         _totalSupply = _totalSupply.add(amount);
         _accountShare[account] = _accountShare[account].add(amount);
@@ -185,9 +189,9 @@ contract Vault is IERC20 {
     }
 
     function _burn(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: burn from the zero address");
+        require(account != address(0), "burn from zero");
 
-        _accountShare[account] = _accountShare[account].sub(amount, "ERC20: burn amount exceeds balance");
+        _accountShare[account] = _accountShare[account].sub(amount, "burn amount");
         _totalSupply = _totalSupply.sub(amount);
 
         _vaultRegistry.updateOwnership(account, address(0));

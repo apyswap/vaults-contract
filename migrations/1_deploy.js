@@ -1,3 +1,4 @@
+const Vault = artifacts.require("Vault");
 const VaultRegistry = artifacts.require("VaultRegistry");
 const TokenRegistry = artifacts.require("TokenRegistry");
 const SimpleValueOracle = artifacts.require("SimpleValueOracle");
@@ -84,7 +85,10 @@ module.exports = async function (deployer, network, accounts) {
   }
 
   await deployer.deploy(TokenRegistry, valueOracleAddress, tokenUSDTAddress, tokenWETHAddress);
-  await deployer.deploy(VaultRegistry, (await TokenRegistry.deployed()).address, 0, "" + Number.MAX_SAFE_INTEGER);
+  await deployer.deploy(Vault);
+  const tokenRegistry = await TokenRegistry.deployed();
+  const vault = await Vault.deployed();
+  await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
 
   // Sync pair price (for Uniswap oracle)
   if (!useSimpleValueOracle) {

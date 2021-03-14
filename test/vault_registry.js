@@ -1,5 +1,6 @@
 const VaultRegistry = artifacts.require("VaultRegistry");
 const TokenRegistry = artifacts.require("TokenRegistry");
+const Vault = artifacts.require("Vault");
 const UniswapValueOracle = artifacts.require("UniswapValueOracle");
 const truffle_contract = require('@truffle/contract');
 const UniswapV2Factory = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Factory.json'));
@@ -28,7 +29,8 @@ contract("VaultRegistry", async accounts => {
 
         tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address);
 
-        vaultRegistry = await VaultRegistry.new(tokenRegistry.address, 0, "" + Number.MAX_SAFE_INTEGER);
+        let vault = await Vault.new();
+        vaultRegistry = await VaultRegistry.new(tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
     });
 
     it("success: initialization", async () => {

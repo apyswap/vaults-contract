@@ -5,19 +5,24 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./Vault.sol";
 import "./interfaces/IVaultRegistry.sol";
+import "./interfaces/ITokenRegistry.sol";
+import "./Vault.sol";
 
 contract VaultRegistry is Ownable, IVaultRegistry {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
+    using Clones for address;
 
     LockInfo[] private _lockInfo;
 
     ITokenRegistry public tokenRegistry;
+
+    address public vaultLogic;
 
     IERC20 public override tokenReward;
     uint256 public rewardTotal;
@@ -29,9 +34,10 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     EnumerableSet.AddressSet private _vaults;
     mapping(address => EnumerableSet.AddressSet) private _accountVaults;
     
-    constructor(ITokenRegistry tokenRegistry_, uint256 startTime_, uint256 finishTime_) public {
+    constructor(ITokenRegistry tokenRegistry_, address vaultLogic_, uint256 startTime_, uint256 finishTime_) public {
 
         tokenRegistry = tokenRegistry_;
+        vaultLogic = vaultLogic_;
         startTime = startTime_;
         finishTime = finishTime_;
 
@@ -42,7 +48,8 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     function createVault() public {
         require(block.timestamp > startTime && block.timestamp < finishTime, "!active");
-        Vault vault = new Vault(msg.sender, this, tokenRegistry);
+        Vault vault = Vault(payable(vaultLogic.clone()));
+        vault.initialize(msg.sender, this, tokenRegistry);
         _vaults.add(address(vault));
         _accountVaults[msg.sender].add(address(vault));
     }
