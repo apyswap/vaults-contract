@@ -26,7 +26,6 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     IERC20 public override tokenReward;
     uint256 public rewardTotal;
-    uint256 public rewardAvailable; 
 
     uint256 public override startTime;
     uint256 public override finishTime;
@@ -40,10 +39,21 @@ contract VaultRegistry is Ownable, IVaultRegistry {
         vaultLogic = vaultLogic_;
         startTime = startTime_;
         finishTime = finishTime_;
+    }
 
-        _lockInfo.push(LockInfo({interval: 1 minutes, reward: 0}));
-        _lockInfo.push(LockInfo({interval: 5 minutes, reward: 10}));
-        _lockInfo.push(LockInfo({interval: 10 minutes, reward: 20}));
+    function addLock(uint256 interval, uint256 reward) external onlyOwner {
+        _lockInfo.push(LockInfo({interval: interval, reward: reward}));
+    }
+    function updateLock(uint256 index, uint256 interval, uint256 reward) external onlyOwner {
+        _lockInfo[index].interval = interval;
+        _lockInfo[index].reward = reward;
+    }
+    function deleteLock(uint256 index) external onlyOwner {
+        while (index < _lockInfo.length - 1) {  // Array is small and admin-managed, so this loop is safe
+            _lockInfo[index] = _lockInfo[index + 1]; // We have to move remaining elements because the order is important
+            index++;
+        }
+        _lockInfo.pop();
     }
 
     function createVault() public {
@@ -54,11 +64,22 @@ contract VaultRegistry is Ownable, IVaultRegistry {
         _accountVaults[msg.sender].add(address(vault));
     }
 
-    function setReward(IERC20 token, uint256 amount) external onlyOwner {
+    function setReward(IERC20 token) external onlyOwner {
         tokenReward = token;
-        token.safeTransferFrom(msg.sender, address(this), amount);
+    }
+
+    function depositReward(uint256 amount) external onlyOwner {
+        tokenReward.safeTransferFrom(msg.sender, address(this), amount);
         rewardTotal = rewardTotal.add(amount);
-        rewardAvailable = rewardAvailable.add(amount);
+    }
+
+    function withdrawReward(uint256 amount) external onlyOwner {
+        tokenReward.safeTransfer(msg.sender, amount);
+        if (amount < rewardTotal) {
+            rewardTotal -= amount;  // No need for the safe math here
+        } else {
+            rewardTotal = 0;
+        }
     }
 
     function vaultCount(address user) external view returns (uint256) {
@@ -99,7 +120,10 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     function getLockReward(uint256 lockIndex, uint256 value) external override {
         require(_vaults.contains(msg.sender), "!vault");
         uint256 reward = value.mul(_lockInfo[lockIndex].reward).div(100);
-        rewardAvailable = rewardAvailable.sub(reward);
         tokenReward.safeTransfer(msg.sender, reward);
+    }
+
+    function manager() external override view returns (address) {
+        return owner();
     }
 }

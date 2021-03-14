@@ -89,6 +89,13 @@ module.exports = async function (deployer, network, accounts) {
   const tokenRegistry = await TokenRegistry.deployed();
   const vault = await Vault.deployed();
   await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
+  const vaultRegistry = await VaultRegistry.deployed();
+
+  if (!mainnet) {  // Add test lock intervals
+    await vaultRegistry.addLock(1 * 60, 0);
+    await vaultRegistry.addLock(5 * 60, 10);
+    await vaultRegistry.addLock(10 * 60, 20);  
+  }
 
   // Sync pair price (for Uniswap oracle)
   if (!useSimpleValueOracle) {
@@ -110,6 +117,7 @@ module.exports = async function (deployer, network, accounts) {
     let vaultRegistry = await VaultRegistry.deployed();
     let amount = web3.utils.toWei("100000");
     await tokenReward.approve(vaultRegistry.address, amount);
-    await vaultRegistry.setReward(tokenRewardAddress, amount);
+    await vaultRegistry.setReward(tokenRewardAddress);
+    await vaultRegistry.depositReward(amount);
   }
 };
