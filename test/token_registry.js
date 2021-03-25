@@ -5,6 +5,7 @@ const UniswapV2Factory = truffle_contract(require('@uniswap/v2-core/build/Uniswa
 const UniswapV2Pair = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Pair.json'));
 const USDT = artifacts.require("USDT");
 const WETH = artifacts.require("WETH");
+const RewardToken = artifacts.require("RewardToken");
 const { time } = require('@openzeppelin/test-helpers');
 
 contract("TokenRegistry", async accounts => {
@@ -23,10 +24,11 @@ contract("TokenRegistry", async accounts => {
         uniswapV2Factory = await UniswapV2Factory.new(accounts[0], {from: accounts[0]});
         tokenUSDT = await USDT.new();
         tokenWETH = await WETH.new();
+        tokenRewar = await RewardToken.new();
 
         // Create test pairs
         await uniswapV2Factory.createPair(tokenUSDT.address, tokenWETH.address, {from: accounts[0]});
-        
+
         let pairAddress = await uniswapV2Factory.getPair(tokenUSDT.address, tokenWETH.address);
         pair = await UniswapV2Pair.at(pairAddress);
         await pair.sync({from: accounts[0]});
@@ -39,14 +41,14 @@ contract("TokenRegistry", async accounts => {
 
         valueOracle = await UniswapValueOracle.new(uniswapV2Factory.address, tokenUSDT.address);
 
-        tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address);
+        tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address, tokenRewar.address);
 
         await time.increase(5);
         await pair.sync({from: accounts[0]});
     });
 
     it("success: initialization", async () => {
-        assert.equal(await tokenRegistry.tokenCount.call(), 2);
+        assert.equal(await tokenRegistry.tokenCount.call(), 3);
     });
 
     it("success: token info", async () => {

@@ -21,21 +21,25 @@ contract TokenRegistry is ITokenRegistry, Ownable {
 
     address private _tokenUSDT;
     address private _tokenWETH;
+    address private _tokenReward;
 
     function USDT() external override view returns (address) { return _tokenUSDT; }
     function WETH() external override view returns (address) { return _tokenWETH; }
+    function tokenReward() external override view returns (address) { return _tokenReward; }
 
     IValueOracle private _valueOracle;
-    
+
     EnumerableSet.AddressSet private _tokens;
     EnumerableSet.AddressSet private _stables;
 
-    constructor(IValueOracle valueOracle, address tokenUSDT, address tokenWETH) public {
+    constructor(IValueOracle valueOracle, address tokenUSDT, address tokenWETH, address tokenReward_) public {
         _valueOracle = valueOracle;
         _tokenUSDT = tokenUSDT;
         _tokenWETH = tokenWETH;
+        _tokenReward = tokenReward_;
         _addToken(_tokenUSDT, true);
         _addToken(_tokenWETH, false);
+        _addToken(_tokenReward, false);
     }
 
     function tokenCount() external override view returns (uint256) {
@@ -56,7 +60,7 @@ contract TokenRegistry is ITokenRegistry, Ownable {
 
     function token(uint256 index) external view returns (TokenInfo memory) {
         IERC20Ex tokenInterface = IERC20Ex(_tokenAddress(index));
-        
+
         return TokenInfo({
             contractAddress: address(tokenInterface),
             name: tokenInterface.name(),
@@ -94,6 +98,17 @@ contract TokenRegistry is ITokenRegistry, Ownable {
             return balance;
         }
 
-        return _valueOracle.getCurrentValue(token_, balance);
+        return _valueOracle.tokenValue(token_, balance);
+    }
+
+    function valueToTokens(address token_, uint256 value) external override view returns (uint256) {
+        if (value == 0) {
+            return 0;
+        }
+        if (_stables.contains(token_)) {
+            return value;
+        }
+
+        return _valueOracle.valueToTokens(token_, value);
     }
 }

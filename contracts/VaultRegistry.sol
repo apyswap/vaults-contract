@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -14,6 +15,8 @@ import "./Vault.sol";
 
 contract VaultRegistry is Ownable, IVaultRegistry {
     using SafeMath for uint256;
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Clones for address;
@@ -26,19 +29,25 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     IERC20 public override tokenReward;
     uint256 public rewardTotal;
+    uint256 public rewardAwailable;
 
     uint256 public override startTime;
     uint256 public override finishTime;
 
     EnumerableSet.AddressSet private _vaults;
     mapping(address => EnumerableSet.AddressSet) private _accountVaults;
-    
+
     constructor(ITokenRegistry tokenRegistry_, address vaultLogic_, uint256 startTime_, uint256 finishTime_) public {
 
         tokenRegistry = tokenRegistry_;
         vaultLogic = vaultLogic_;
         startTime = startTime_;
         finishTime = finishTime_;
+    }
+
+    modifier onlyVault() {
+        require(_vaults.contains(msg.sender), "!vault");
+        _;
     }
 
     function addLock(uint256 interval, uint256 reward) external onlyOwner {
@@ -68,18 +77,18 @@ contract VaultRegistry is Ownable, IVaultRegistry {
         tokenReward = token;
     }
 
-    function depositReward(uint256 amount) external onlyOwner {
-        tokenReward.safeTransferFrom(msg.sender, address(this), amount);
-        rewardTotal = rewardTotal.add(amount);
+    function setRewardValue(uint256 amount) external onlyOwner {
+        int256 diff = amount.toInt256() - rewardTotal.toInt256();
+        rewardTotal = amount;
+        rewardAwailable = (rewardAwailable.toInt256() + diff).toUint256();
+    }
+
+    function subReward(uint256 amount) external override onlyVault {
+        rewardAwailable = rewardAwailable.sub(amount);
     }
 
     function withdrawReward(uint256 amount) external onlyOwner {
         tokenReward.safeTransfer(msg.sender, amount);
-        if (amount < rewardTotal) {
-            rewardTotal -= amount;  // No need for the safe math here
-        } else {
-            rewardTotal = 0;
-        }
     }
 
     function vaultCount(address user) external view returns (uint256) {
@@ -106,8 +115,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
         return _lockInfo[index];
     }
 
-    function updateOwnership(address sender, address recipient) external override {
-        require(_vaults.contains(msg.sender), "!vault");
+    function updateOwnership(address sender, address recipient) external override onlyVault {
         IERC20 vault_ = IERC20(msg.sender);
         if (sender != address(0) && vault_.balanceOf(sender) == 0) {
             _accountVaults[sender].remove(address(vault_));
@@ -117,10 +125,9 @@ contract VaultRegistry is Ownable, IVaultRegistry {
         }
     }
 
-    function getLockReward(uint256 lockIndex, uint256 value) external override {
-        require(_vaults.contains(msg.sender), "!vault");
-        uint256 reward = value.mul(_lockInfo[lockIndex].reward).div(100);
-        tokenReward.safeTransfer(msg.sender, reward);
+    function sendReward(address user, uint256 value) external override onlyVault {
+        uint256 tokenAmount = tokenRegistry.valueToTokens(address(tokenReward), value);
+        tokenReward.safeTransfer(user, tokenAmount);
     }
 
     function manager() external override view returns (address) {

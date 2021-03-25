@@ -32,18 +32,20 @@ contract("Deployment", async accounts => {
         assert.equal(await tokenReward.balanceOf.call(vaultRegistry.address), web3.utils.toWei("100000"));
 
         // Check token registry tokens
-        assert.equal(await tokenRegistry.tokenCount.call(), 2);
+        assert.equal(await tokenRegistry.tokenCount.call(), 3);
         assert.sameMembers([
             await tokenRegistry.tokenAddress.call(0),
             await tokenRegistry.tokenAddress.call(1),
+            await tokenRegistry.tokenAddress.call(2),
         ], [
             WETH.address,
+            RewardToken.address,
             USDT.address,
         ]);
 
         // Check Uniswap integration
-        assert.equal((await tokenRegistry.tokenValue(USDT.address, "100")).toString(), "100"); 
-        assert.equal((await tokenRegistry.tokenValue(WETH.address, "100")).toString(), "200000"); 
+        assert.equal((await tokenRegistry.tokenValue(USDT.address, "100")).toString(), "100");
+        assert.equal((await tokenRegistry.tokenValue(WETH.address, "100")).toString(), "200000");
     });
 
     let vault;
@@ -65,7 +67,9 @@ contract("Deployment", async accounts => {
 
     it("success: reward for locking", async () => {
         await vault.lock(2);
-        let reward = new BN(web3.utils.toWei("6003")).divn(5); // 20%
-        assert.equal((await tokenReward.balanceOf.call(vault.address)).toString(), reward);
+        let reward = new BN(web3.utils.toWei("1000")).divn(5); // 20% max reward = 1000
+        assert.equal((await vault.rewardValue.call()).toString(), reward.toString());
+        assert.equal((await vaultRegistry.rewardTotal()).toString(), web3.utils.toWei("100000"));
+        assert.equal((await vaultRegistry.rewardAwailable()).toString(), new BN(web3.utils.toWei("100000")).sub(reward).toString());
     });
 });
