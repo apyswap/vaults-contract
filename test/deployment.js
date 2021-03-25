@@ -70,6 +70,6 @@ contract("Deployment", async accounts => {
         let reward = new BN(web3.utils.toWei("1000")).divn(5); // 20% max reward = 1000
         assert.equal((await vault.rewardValue.call()).toString(), reward.toString());
         assert.equal((await vaultRegistry.rewardTotal()).toString(), web3.utils.toWei("100000"));
-        assert.equal((await vaultRegistry.rewardAwailable()).toString(), new BN(web3.utils.toWei("100000")).sub(reward).toString());
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), new BN(web3.utils.toWei("100000")).sub(reward).toString());
     });
 });

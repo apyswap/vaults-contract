@@ -15,9 +15,15 @@
     "@uniswap/v2-core": "^1.0.1",
     "dotenv": "^8.2.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@typechain/truffle-v5": "^4.0.1",
+    "typechain": "^4.0.3"
+  },
   "scripts": {
-    "test": "truffle test"
+    "test": "truffle test",
+    "build": "truffle build",
+    "generate-types":  "typechain --target truffle-v5 --outDir types './build/contracts/*.json'"
+
   },
   "repository": {
     "type": "git",

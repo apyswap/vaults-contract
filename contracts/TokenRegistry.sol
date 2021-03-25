@@ -25,21 +25,18 @@ contract TokenRegistry is ITokenRegistry, Ownable {
 
     function USDT() external override view returns (address) { return _tokenUSDT; }
     function WETH() external override view returns (address) { return _tokenWETH; }
-    function tokenReward() external override view returns (address) { return _tokenReward; }
 
     IValueOracle private _valueOracle;
 
     EnumerableSet.AddressSet private _tokens;
     EnumerableSet.AddressSet private _stables;
 
-    constructor(IValueOracle valueOracle, address tokenUSDT, address tokenWETH, address tokenReward_) public {
+    constructor(IValueOracle valueOracle, address tokenUSDT, address tokenWETH) public {
         _valueOracle = valueOracle;
         _tokenUSDT = tokenUSDT;
         _tokenWETH = tokenWETH;
-        _tokenReward = tokenReward_;
         _addToken(_tokenUSDT, true);
         _addToken(_tokenWETH, false);
-        _addToken(_tokenReward, false);
     }
 
     function tokenCount() external override view returns (uint256) {

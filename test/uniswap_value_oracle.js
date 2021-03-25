@@ -8,11 +8,10 @@ const WETH = artifacts.require("WETH");
 const RewardToken = artifacts.require("RewardToken");
 const { time } = require('@openzeppelin/test-helpers');
 
-contract("TokenRegistry", async accounts => {
+contract("UniswapValueOracle", async accounts => {
 
     let uniswapV2Factory;
     let valueOracle;
-    let tokenRegistry;
     let tokenUSDT;
     let tokenWETH;
 
@@ -41,48 +40,27 @@ contract("TokenRegistry", async accounts => {
 
         valueOracle = await UniswapValueOracle.new(uniswapV2Factory.address, tokenUSDT.address);
 
-        tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address);
+        const tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address);
         await tokenRegistry.addToken(tokenReward.address, false);
 
         await time.increase(5);
         await pair.sync({from: accounts[0]});
     });
 
-    it("Success: initialization", async () => {
-        assert.equal(await tokenRegistry.tokenCount(), 3);
-    });
-
-    it("Success: token info", async () => {
-        const result = await tokenRegistry.token.call(0);
-        assert.equal(result[0], tokenWETH.address);
-        assert.equal(result[1], "Wrapped Ethereum");
-        assert.equal(result[2], "WETH");
-        assert.equal(result[3], "18");
-    });
-
-    it("Success: token value", async () => {
+    it("success: known token", async () => {
         const ETH_BALANCE = web3.utils.toWei("100");
         const ETH_VALUE = web3.utils.toWei("200000");
-
-        const result = await tokenRegistry.tokenValue(tokenWETH.address, ETH_BALANCE);
-        assert.equal(result.toString(), ETH_VALUE);
-    });
-
-    it("Success: value in token", async () => {
-        const ETH_BALANCE = web3.utils.toWei("100");
         const VALUE_TO_ETH = web3.utils.toWei("0.05");
 
-        const result = await tokenRegistry.valueToTokens(tokenWETH.address, ETH_BALANCE);
-        assert.equal(result.toString(), VALUE_TO_ETH);
+        const resultValue = await valueOracle.tokenValue(tokenWETH.address, ETH_BALANCE);
+        const resultToken = await valueOracle.valueToTokens(tokenWETH.address, ETH_BALANCE);
+        assert.equal(resultValue.toString(), ETH_VALUE);
+        assert.equal(resultToken.toString(), VALUE_TO_ETH);
     });
 
-    it("Success: removeToken", async () => {
-        await tokenRegistry.removeToken(tokenReward.address);
-        assert.equal((await tokenRegistry.tokenCount()).toString(), '2');
+    it("success: unknown token", async () => {
+        let result = await valueOracle.tokenValue.call(tokenUSDT.address, web3.utils.toWei("123"));
+        assert.equal(result.toString(), "0");
     });
 
-    it("Success: removeToken not found", async () => {
-        await tokenRegistry.removeToken(accounts[2]);
-        assert.equal((await tokenRegistry.tokenCount()).toString(), '3');
-    });
 });

@@ -29,7 +29,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     IERC20 public override tokenReward;
     uint256 public rewardTotal;
-    uint256 public rewardAwailable;
+    uint256 public rewardAvailable;
 
     uint256 public override startTime;
     uint256 public override finishTime;
@@ -80,11 +80,11 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     function setRewardValue(uint256 amount) external onlyOwner {
         int256 diff = amount.toInt256() - rewardTotal.toInt256();
         rewardTotal = amount;
-        rewardAwailable = (rewardAwailable.toInt256() + diff).toUint256();
+        rewardAvailable = (rewardAvailable.toInt256() + diff).toUint256();
     }
 
     function subReward(uint256 amount) external override onlyVault {
-        rewardAwailable = rewardAwailable.sub(amount);
+        rewardAvailable = rewardAvailable.sub(amount);
     }
 
     function withdrawReward(uint256 amount) external onlyOwner {

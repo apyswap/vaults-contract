@@ -41,7 +41,8 @@ contract("Vault", async accounts => {
     await valueOracle.setValue(tokenWETH.address, new BN("2").pow(new BN("112")).mul(new BN("7"))); // 1 WETH = $7
     await valueOracle.setValue(tokenReward.address, new BN("2").pow(new BN("112")).div(new BN("2"))); // 1 APYS = $0.5
 
-    tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address, tokenReward.address);
+    tokenRegistry = await TokenRegistry.new(valueOracle.address, tokenUSDT.address, tokenWETH.address);
+    await tokenRegistry.addToken(tokenReward.address, false);
 
     const vaultPrototype = await Vault.new();
     vaultRegistry = await VaultRegistry.new(tokenRegistry.address, vaultPrototype.address, 0, "" + Number.MAX_SAFE_INTEGER);
@@ -59,7 +60,7 @@ contract("Vault", async accounts => {
     vault = await Vault.at(vaultAddressUser1);
   });
 
-  it("success: withdraw", async () => {
+  it("Success: withdraw", async () => {
     await vault.send(toWei("1")); // 1 ETH = $7
     await tokenUSDT.transfer(vault.address, toWei("16")); // 16 USDT = $16
     await tokenWETH.transfer(vault.address, toWei("5")); // 5 WETH = $35
@@ -74,7 +75,7 @@ contract("Vault", async accounts => {
     assert.equal((await vault.lockedUntil()).toString(), (+blocktime + 5 * 60).toString());
     assert.equal((await vault.lockedValue()).toString(), toWei("62"));
     assert.equal((await vault.rewardValue()).toString(), toWei("6.2")); // 62 * 10% = 6.2
-    assert.equal((await vaultRegistry.rewardAwailable()).toString(), toWei("99993.8")); // 10000 - 6.2 = 99993.8
+    assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99993.8")); // 10000 - 6.2 = 99993.8
 
     // transfer
     await vault.transfer(user2, toWei("0.4", "ether"), {from: user1});
@@ -146,7 +147,7 @@ contract("Vault", async accounts => {
     await vault.lock('0', {from: user1});
     assert.equal((await vault.lockedValue()).toString(), toWei("0"));
     assert.equal((await vault.rewardValue()).toString(), toWei("0"));
-    assert.equal((await vaultRegistry.rewardAwailable()).toString(), toWei("100000"));
+    assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("100000"));
     await time.increase(61);
     await vault.withdraw({from: user1});
   });
@@ -170,7 +171,7 @@ contract("Vault", async accounts => {
     await vault.lock('1', {from: user1});
     assert.equal((await vault.lockedValue()).toString(), toWei("1000"));
     assert.equal((await vault.rewardValue()).toString(), toWei("100"));
-    assert.equal((await vaultRegistry.rewardAwailable()).toString(), toWei("99900"));
+    assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99900"));
   });
 
   it('Success: unlock', async () => {
@@ -178,11 +179,11 @@ contract("Vault", async accounts => {
     await vault.lock('1', {from: user1});
     assert.equal((await vault.lockedValue()).toString(), toWei("70"));
     assert.equal((await vault.rewardValue()).toString(), toWei("7"));
-    assert.equal((await vaultRegistry.rewardAwailable()).toString(), toWei("99993"));
+    assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99993"));
     await vault.unlock({from: user1});
     assert.equal((await vault.lockedValue()).toString(), toWei("70"));
     assert.equal((await vault.rewardValue()).toString(), toWei("0"));
-    assert.equal((await vaultRegistry.rewardAwailable()).toString(), toWei("99993"));
+    assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99993"));
     await vault.withdraw({from: user1});
     assert.equal((await tokenReward.balanceOf(user1)).toString(), toWei('0'));
   });

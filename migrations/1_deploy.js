@@ -50,6 +50,7 @@ module.exports = async function (deployer, network, accounts) {
     await deployer.deploy(SimpleValueOracle);
     const simpleOracle = await SimpleValueOracle.deployed();
     await simpleOracle.setValue(tokenWETHAddress, new BN("1800").mul(await simpleOracle.Q112.call()));
+    await simpleOracle.setValue(tokenRewardAddress, new BN("2").mul(await simpleOracle.Q112.call()));
     valueOracleAddress = simpleOracle.address;
   } else {
 
@@ -100,9 +101,10 @@ module.exports = async function (deployer, network, accounts) {
 
   }
 
-  await deployer.deploy(TokenRegistry, valueOracleAddress, tokenUSDTAddress, tokenWETHAddress, tokenRewardAddress);
+  await deployer.deploy(TokenRegistry, valueOracleAddress, tokenUSDTAddress, tokenWETHAddress);
   await deployer.deploy(Vault);
   const tokenRegistry = await TokenRegistry.deployed();
+  await tokenRegistry.addToken(tokenRewardAddress, false);
   const vault = await Vault.deployed();
   await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
   const vaultRegistry = await VaultRegistry.deployed();

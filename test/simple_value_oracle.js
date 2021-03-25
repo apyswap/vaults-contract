@@ -20,9 +20,12 @@ contract("SimpleValueOracle", async accounts => {
         let rateDenominator = new BN("1000");
         await valueOracle.setValue(tokenWETH.address, rateNumerator.mul(await valueOracle.Q112.call()).div(rateDenominator));
 
-        let result = await valueOracle.tokenValue.call(tokenWETH.address, web3.utils.toWei("100"));
+        let result = await valueOracle.tokenValue(tokenWETH.address, web3.utils.toWei("100"));
         result = result.addn(1);    // Fix rounding errors
         assert.equal(result.toString(), web3.utils.toWei("177735.6"));
+
+        result = await valueOracle.valueToTokens(tokenWETH.address, web3.utils.toWei("100"));
+        assert.equal(result.toString(), web3.utils.toWei("0.056263348479426743")); // (1000 * 100) / 1777356
     });
 
     it("success: unknown token", async () => {
