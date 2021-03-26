@@ -31,7 +31,7 @@ contract UniswapValueOracle is IValueOracle, Ownable {
         _tokenValues[token] = _getTokenValueInfo(token);
     }
 
-    function getCurrentValue(address token, uint256 balance) external override view returns (uint256) {
+    function tokenValue(address token, uint256 balance) external override view returns (uint256) {
         TokenValueInfo storage pastInfo = _tokenValues[token];
         if (pastInfo.cumulativePrice == 0) {
             return 0;
@@ -47,6 +47,24 @@ contract UniswapValueOracle is IValueOracle, Ownable {
 
         return valueInfo.cumulativePrice.sub(pastInfo.cumulativePrice).mul(balance).div(Q112)
             .div(valueInfo.timestamp.sub(pastInfo.timestamp));
+    }
+
+    function valueToTokens(address token, uint256 balance) external override view returns (uint256) {
+        TokenValueInfo storage pastInfo = _tokenValues[token];
+        if (pastInfo.cumulativePrice == 0) {
+            return 0;
+        }
+
+        TokenValueInfo memory valueInfo = _getTokenValueInfo(token);
+        if (valueInfo.cumulativePrice == 0 || valueInfo.cumulativePrice <= pastInfo.cumulativePrice) {
+            return 0;
+        }
+        if (valueInfo.timestamp <= pastInfo.timestamp) {
+            return 0;
+        }
+
+        return valueInfo.timestamp.sub(pastInfo.timestamp).mul(balance).mul(Q112)
+            .div(valueInfo.cumulativePrice.sub(pastInfo.cumulativePrice));
     }
 
     function _getTokenValueInfo(address token) internal view returns (TokenValueInfo memory info) {

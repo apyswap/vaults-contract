@@ -20,7 +20,11 @@ contract SimpleValueOracle is IValueOracle, Ownable {
         _tokenValues[token] = value;
     }
 
-    function getCurrentValue(address token, uint256 balance) external override view returns (uint256) {
+    function tokenValue(address token, uint256 balance) external override view returns (uint256) {
         return _tokenValues[token].mul(balance).div(Q112);
+    }
+
+    function valueToTokens(address token, uint256 balance) external override view returns (uint256) {
+        return balance.mul(Q112).div(_tokenValues[token]);
     }
 }

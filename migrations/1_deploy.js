@@ -17,7 +17,7 @@ require('@openzeppelin/test-helpers/configure')({
     abstraction: 'truffle',
   },
 });
-const { time } = require('@openzeppelin/test-helpers');    
+const { time } = require('@openzeppelin/test-helpers');
 
 UniswapV2Factory.setProvider(web3._provider);
 UniswapV2Pair.setProvider(web3._provider);
@@ -29,24 +29,28 @@ module.exports = async function (deployer, network, accounts) {
   const mainnet = (deployer.network == "mainnet");
 
   // Set up main currencies/tokens
-  let tokenUSDTAddress, tokenWETHAddress;
+  let tokenUSDTAddress, tokenWETHAddress, tokenRewardAddress;
   if (!mainnet) {
     await deployer.deploy(USDT);
     await deployer.deploy(WETH);
+    await deployer.deploy(RewardToken);
     tokenUSDTAddress = (await USDT.deployed()).address;
     tokenWETHAddress = (await WETH.deployed()).address;
+    tokenRewardAddress = (await RewardToken.deployed()).address;
   } else {
     tokenUSDTAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
     tokenWETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+    tokenRewardAddress = "" //TODO ;
   }
 
   let valueOracleAddress;
   if (useSimpleValueOracle) {
-    
+
     // Use Simple oracle
     await deployer.deploy(SimpleValueOracle);
     const simpleOracle = await SimpleValueOracle.deployed();
     await simpleOracle.setValue(tokenWETHAddress, new BN("1800").mul(await simpleOracle.Q112.call()));
+    await simpleOracle.setValue(tokenRewardAddress, new BN("2").mul(await simpleOracle.Q112.call()));
     valueOracleAddress = simpleOracle.address;
   } else {
 
@@ -60,20 +64,32 @@ module.exports = async function (deployer, network, accounts) {
       // Create test pairs
       let factory = await UniswapV2Factory.deployed();
       await factory.createPair(tokenUSDTAddress, tokenWETHAddress, {from: accounts[0]});
-      
+      await factory.createPair(tokenUSDTAddress, tokenRewardAddress, {from: accounts[0]});
+
       let pairAddress = await factory.getPair(tokenUSDTAddress, tokenWETHAddress);
+      let pairAddressReward = await factory.getPair(tokenUSDTAddress, tokenRewardAddress);
       const pair = await UniswapV2Pair.at(pairAddress);
+
+      const pairReward = await UniswapV2Pair.at(pairAddressReward);
       await pair.sync({from: accounts[0]});
+      await pairReward.sync({from: accounts[0]});
 
       let tokenUSDT = await USDT.at(tokenUSDTAddress);
       let tokenWETH = await WETH.at(tokenWETHAddress);
+      let tokenReward = await RewardToken.at(tokenRewardAddress);
 
       await tokenUSDT.transfer(pairAddress, web3.utils.toWei("2000"));
       await tokenWETH.transfer(pairAddress, web3.utils.toWei("1"));
+
+      await tokenUSDT.transfer(pairAddressReward, web3.utils.toWei("2000"));
+      await tokenReward.transfer(pairAddressReward, web3.utils.toWei("1000"));
+
       await time.increase(5);
       await pair.mint(accounts[0], {from: accounts[0]});
+      await pairReward.mint(accounts[0], {from: accounts[0]});
       await time.increase(5);
       await pair.sync({from: accounts[0]});
+      await pairReward.sync({from: accounts[0]});
 
       await time.increase(5);
     } else {
@@ -82,11 +98,13 @@ module.exports = async function (deployer, network, accounts) {
 
     await deployer.deploy(UniswapValueOracle, uniswapFactoryAddress, tokenUSDTAddress);
     valueOracleAddress = (await UniswapValueOracle.deployed()).address;
+
   }
 
   await deployer.deploy(TokenRegistry, valueOracleAddress, tokenUSDTAddress, tokenWETHAddress);
   await deployer.deploy(Vault);
   const tokenRegistry = await TokenRegistry.deployed();
+  await tokenRegistry.addToken(tokenRewardAddress, false);
   const vault = await Vault.deployed();
   await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
   const vaultRegistry = await VaultRegistry.deployed();
@@ -94,7 +112,7 @@ module.exports = async function (deployer, network, accounts) {
   if (!mainnet) {  // Add test lock intervals
     await vaultRegistry.addLock(1 * 60, 0);
     await vaultRegistry.addLock(5 * 60, 10);
-    await vaultRegistry.addLock(10 * 60, 20);  
+    await vaultRegistry.addLock(10 * 60, 20);
   }
 
   // Sync pair price (for Uniswap oracle)
@@ -110,14 +128,11 @@ module.exports = async function (deployer, network, accounts) {
 
   // Configure reward tokens
   if (!mainnet) {
-    await deployer.deploy(RewardToken);
     let tokenReward = await RewardToken.deployed();
-
-    let tokenRewardAddress = tokenReward.address;
-    let vaultRegistry = await VaultRegistry.deployed();
     let amount = web3.utils.toWei("100000");
-    await tokenReward.approve(vaultRegistry.address, amount);
-    await vaultRegistry.setReward(tokenRewardAddress);
-    await vaultRegistry.depositReward(amount);
+    let vaultRegistry = await VaultRegistry.deployed();
+    await tokenReward.transfer(vaultRegistry.address, amount);
+    await vaultRegistry.setRewardValue(amount);
   }
+  await vaultRegistry.setReward(tokenRewardAddress);
 };

@@ -21,12 +21,12 @@ contract Vault is IERC20, Initializable {
     uint256 public lockedSince;
     uint256 public lockedUntil;
     uint256 public lockedValue;
+    uint256 public rewardValue;
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _accountShare;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    uint256 constant private MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
     uint256 constant private TOTAL_SHARE = 1 ether;
     uint256 constant private EMERGENCY_INTERVAL = 100 days;
 
@@ -126,22 +126,21 @@ contract Vault is IERC20, Initializable {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function lock(uint256 lockTypeId) external neverlocked {
+    function lock(uint256 lockTypeId) external neverlocked shareOwner {
         LockInfo memory lockInfo = _vaultRegistry.lockInfo(lockTypeId);
+        uint256 maxLockedValue = _vaultRegistry.maxLockedValue();
         lockedSince = block.timestamp;
         lockedUntil = block.timestamp + lockInfo.interval;
-        lockedValue = Math.max(_totalValue(), MAX_LOCKED_VALUE);
-        _vaultRegistry.getLockReward(lockTypeId, lockedValue);
+        lockedValue = Math.min(_totalValue(), maxLockedValue);
+        rewardValue = lockedValue.mul(lockInfo.reward).div(100);
+        _vaultRegistry.subReward(rewardValue);
     }
 
     // Emergency unlock, all liquidity is instantly withdrawable, but reward is lost
     function unlock() external locked shareOwner {
         // Mark unlocked
         lockedUntil = block.timestamp - 1;
-
-        // Remove all the rewards
-        IERC20 rewardContract = _vaultRegistry.tokenReward();
-        rewardContract.safeTransfer(address(_vaultRegistry), rewardContract.balanceOf(address(this)));
+        rewardValue = 0;
     }
 
     // Withdraw tokens according to the user's share, burn ownership token
@@ -166,8 +165,9 @@ contract Vault is IERC20, Initializable {
         }
 
         // Transfer reward tokens
-        IERC20 rewardContract = _vaultRegistry.tokenReward();
-        rewardContract.safeTransfer(msg.sender, _calculateShareBalanceAfterBurn(share, rewardContract.balanceOf(address(this))));
+        uint256 amount = _calculateShareBalanceAfterBurn(share, rewardValue);
+        rewardValue = rewardValue.sub(amount);
+        _vaultRegistry.sendReward(msg.sender, amount);
     }
 
     function emergencyEthWithdraw(uint256 amount) external registryManager {
@@ -202,7 +202,7 @@ contract Vault is IERC20, Initializable {
 
         emit Transfer(sender, recipient, amount);
     }
-    
+
     function _approve(address owner, address spender, uint256 amount) internal {
         require(owner != address(0), "approve from zero");
         require(spender != address(0), "approve to zero");

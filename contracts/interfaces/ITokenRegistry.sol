@@ -13,6 +13,7 @@ interface ITokenRegistry {
     function WETH() external view returns (address);
     function USDT() external view returns (address);
     function tokenValue(address token_, uint256 balance) external view returns (uint256);
+    function valueToTokens(address token_, uint256 balance) external view returns (uint256);
     function tokenCount() external view returns (uint256);
     function tokenAddress(uint256 index) external view returns (address);
 }

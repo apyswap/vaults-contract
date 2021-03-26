@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 struct LockInfo {
     uint256 interval;
-    uint256 reward;   
+    uint256 reward;
 }
 
 interface IVaultRegistry {
@@ -21,5 +21,8 @@ interface IVaultRegistry {
     function lockInfo(uint256 index) external view returns (LockInfo memory);
 
     function updateOwnership(address sender, address recipient) external;
-    function getLockReward(uint256 lockIndex, uint256 value) external;
+    function sendReward(address user, uint256 value) external;
+    function subReward(uint256 amount) external;
+
+    function maxLockedValue() external view returns (uint256);
 }
