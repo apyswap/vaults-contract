@@ -8,6 +8,7 @@ const USDT = artifacts.require("USDT");
 const WETH = artifacts.require("WETH");
 const RewardToken = artifacts.require("RewardToken");
 const { Helper } = require("./_helper.js");
+const toWei = web3.utils.toWei;
 
 contract("VaultRegistry", async accounts => {
 
@@ -51,7 +52,7 @@ contract("VaultRegistry", async accounts => {
         const vaultAddress = await vaultRegistry.vault(accounts[0], 0);
         assert.isDefined(vaultAddress);
         const vault = await Vault.at(vaultAddress);
-        assert.equal((await vault.balanceOf(accounts[0])).toString(), web3.utils.toWei("1"))
+        assert.equal((await vault.balanceOf(accounts[0])).toString(), toWei("1"))
     });
 
     it("Success: add lock", async () => {
@@ -104,27 +105,27 @@ contract("VaultRegistry", async accounts => {
     })
 
     it("Success: setRewardValue", async () => {
-        await vaultRegistry.setRewardValue( web3.utils.toWei("100000"));
-        assert.equal((await vaultRegistry.rewardTotal()).toString(),  web3.utils.toWei("100000"));
-        assert.equal((await vaultRegistry.rewardAvailable()).toString(), web3.utils.toWei("100000"));
+        await vaultRegistry.setRewardValue( toWei("100000"));
+        assert.equal((await vaultRegistry.rewardTotal()).toString(),  toWei("100000"));
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("100000"));
         await vaultRegistry.createVault({from: accounts[1]});
         const vaultAddress = await vaultRegistry.vault(accounts[1], 0);
         const vault = await Vault.at(vaultAddress);
-        tokenUSDT.transfer(vault.address, web3.utils.toWei("1000"));
+        tokenUSDT.transfer(vault.address, toWei("1000"));
         await vault.lock(1, {from: accounts[1]});
-        assert.equal((await vaultRegistry.rewardTotal()).toString(), web3.utils.toWei("100000"));
-        assert.equal((await vaultRegistry.rewardAvailable()).toString(), web3.utils.toWei("99900"));
-        await vaultRegistry.setRewardValue(web3.utils.toWei("150000"));
-        assert.equal((await vaultRegistry.rewardTotal()).toString(), web3.utils.toWei("150000"));
-        assert.equal((await vaultRegistry.rewardAvailable()).toString(), web3.utils.toWei("149900"));
-        await vaultRegistry.setRewardValue(web3.utils.toWei("50000"));
-        assert.equal((await vaultRegistry.rewardTotal()).toString(), web3.utils.toWei("50000"));
-        assert.equal((await vaultRegistry.rewardAvailable()).toString(), web3.utils.toWei("49900"));
-        await Helper.tryCatch(vaultRegistry.setRewardValue(web3.utils.toWei("50"), {from: accounts[1]}), "");
+        assert.equal((await vaultRegistry.rewardTotal()).toString(), toWei("100000"));
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99900"));
+        await vaultRegistry.setRewardValue(toWei("150000"));
+        assert.equal((await vaultRegistry.rewardTotal()).toString(), toWei("150000"));
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("149900"));
+        await vaultRegistry.setRewardValue(toWei("50000"));
+        assert.equal((await vaultRegistry.rewardTotal()).toString(), toWei("50000"));
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("49900"));
+        await Helper.tryCatch(vaultRegistry.setRewardValue(toWei("50"), {from: accounts[1]}), "");
     });
 
     it("Success: globalVaultCount and globalVault", async () => {
-        await vaultRegistry.setRewardValue( web3.utils.toWei("100000"));
+        await vaultRegistry.setRewardValue( toWei("100000"));
         await vaultRegistry.createVault({from: accounts[1]});
         const vaultAddress = await vaultRegistry.vault(accounts[1], 0);
         const globalVaultCount = await vaultRegistry.globalVaultCount();
@@ -134,19 +135,19 @@ contract("VaultRegistry", async accounts => {
     });
 
     it("Success: update maxLockedValue", async () => {
-        await vaultRegistry.setRewardValue( web3.utils.toWei("100000"));
-        assert.equal((await vaultRegistry.maxLockedValue()).toString(), web3.utils.toWei("1000"));
-        await vaultRegistry.setMaxLockedValue(web3.utils.toWei("100"));
-        assert.equal((await vaultRegistry.maxLockedValue()).toString(), web3.utils.toWei("100"));
+        await vaultRegistry.setRewardValue( toWei("100000"));
+        assert.equal((await vaultRegistry.maxLockedValue()).toString(), toWei("1000"));
+        await vaultRegistry.setMaxLockedValue(toWei("100"));
+        assert.equal((await vaultRegistry.maxLockedValue()).toString(), toWei("100"));
         await vaultRegistry.createVault({from: accounts[1]});
         const vaultAddress = await vaultRegistry.vault(accounts[1], 0);
         const vault = await Vault.at(vaultAddress);
-        tokenUSDT.transfer(vault.address, web3.utils.toWei("1000"));
+        tokenUSDT.transfer(vault.address, toWei("1000"));
         await vault.lock(1, {from: accounts[1]});
-        expect((await vault.rewardValue()).toString(), web3.utils.toWei("10"))
+        expect((await vault.rewardValue()).toString(), toWei("10"))
     });
 
     it("Fail: update maxLockedValue not owner", async () => {
-        await Helper.tryCatch(vaultRegistry.setMaxLockedValue(web3.utils.toWei("1000"), {from: accounts[1]}), "Ownable: caller is not the owner");
+        await Helper.tryCatch(vaultRegistry.setMaxLockedValue(toWei("1000"), {from: accounts[1]}), "Ownable: caller is not the owner");
     })
 });

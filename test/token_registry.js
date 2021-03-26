@@ -1,12 +1,13 @@
 const TokenRegistry = artifacts.require("TokenRegistry");
 const UniswapValueOracle = artifacts.require("UniswapValueOracle");
-const truffle_contract = require('@truffle/contract');
-const UniswapV2Factory = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Factory.json'));
-const UniswapV2Pair = truffle_contract(require('@uniswap/v2-core/build/UniswapV2Pair.json'));
+const truffle_contract = require("@truffle/contract");
+const UniswapV2Factory = truffle_contract(require("@uniswap/v2-core/build/UniswapV2Factory.json"));
+const UniswapV2Pair = truffle_contract(require("@uniswap/v2-core/build/UniswapV2Pair.json"));
 const USDT = artifacts.require("USDT");
 const WETH = artifacts.require("WETH");
 const RewardToken = artifacts.require("RewardToken");
-const { time } = require('@openzeppelin/test-helpers');
+const { time } = require("@openzeppelin/test-helpers");
+const toWei = web3.utils.toWei;
 
 contract("TokenRegistry", async accounts => {
 
@@ -33,8 +34,8 @@ contract("TokenRegistry", async accounts => {
         pair = await UniswapV2Pair.at(pairAddress);
         await pair.sync({from: accounts[0]});
 
-        await tokenUSDT.transfer(pairAddress, web3.utils.toWei("2000"));
-        await tokenWETH.transfer(pairAddress, web3.utils.toWei("1"));
+        await tokenUSDT.transfer(pairAddress, toWei("2000"));
+        await tokenWETH.transfer(pairAddress, toWei("1"));
         await pair.mint(accounts[0], {from: accounts[0]});
         await time.increase(5);
         await pair.sync({from: accounts[0]});
@@ -61,16 +62,16 @@ contract("TokenRegistry", async accounts => {
     });
 
     it("Success: token value", async () => {
-        const ETH_BALANCE = web3.utils.toWei("100");
-        const ETH_VALUE = web3.utils.toWei("200000");
+        const ETH_BALANCE = toWei("100");
+        const ETH_VALUE = toWei("200000");
 
         const result = await tokenRegistry.tokenValue(tokenWETH.address, ETH_BALANCE);
         assert.equal(result.toString(), ETH_VALUE);
     });
 
     it("Success: value in token", async () => {
-        const ETH_BALANCE = web3.utils.toWei("100");
-        const VALUE_TO_ETH = web3.utils.toWei("0.05");
+        const ETH_BALANCE = toWei("100");
+        const VALUE_TO_ETH = toWei("0.05");
 
         const result = await tokenRegistry.valueToTokens(tokenWETH.address, ETH_BALANCE);
         assert.equal(result.toString(), VALUE_TO_ETH);
@@ -78,11 +79,11 @@ contract("TokenRegistry", async accounts => {
 
     it("Success: removeToken", async () => {
         await tokenRegistry.removeToken(tokenReward.address);
-        assert.equal((await tokenRegistry.tokenCount()).toString(), '2');
+        assert.equal((await tokenRegistry.tokenCount()).toString(), "2");
     });
 
     it("Success: removeToken not found", async () => {
         await tokenRegistry.removeToken(accounts[2]);
-        assert.equal((await tokenRegistry.tokenCount()).toString(), '3');
+        assert.equal((await tokenRegistry.tokenCount()).toString(), "3");
     });
 });

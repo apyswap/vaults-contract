@@ -1,4 +1,4 @@
-const BN = require('bn.js');
+const BN = require("bn.js");
 
 const TokenRegistry = artifacts.require("TokenRegistry");
 const VaultRegistry = artifacts.require("VaultRegistry");
@@ -6,6 +6,7 @@ const WETH = artifacts.require("WETH");
 const USDT = artifacts.require("USDT");
 const Vault = artifacts.require("Vault");
 const RewardToken = artifacts.require("RewardToken");
+const toWei = web3.utils.toWei;
 
 // Generic tests checking if all contracts are deployed correctly
 contract("Deployment", async accounts => {
@@ -15,7 +16,7 @@ contract("Deployment", async accounts => {
     let tokenWETH, tokenUSDT;
     let tokenReward;
 
-    it("success: deployment", async () => {
+    it("Success: deployment", async () => {
         tokenRegistry = await TokenRegistry.deployed();
         assert.exists(tokenRegistry);
         vaultRegistry = await VaultRegistry.deployed();
@@ -29,7 +30,7 @@ contract("Deployment", async accounts => {
 
         assert.equal(await vaultRegistry.tokenRegistry.call(), tokenRegistry.address);
         assert.equal(await vaultRegistry.tokenReward.call(), tokenReward.address);
-        assert.equal(await tokenReward.balanceOf.call(vaultRegistry.address), web3.utils.toWei("100000"));
+        assert.equal(await tokenReward.balanceOf.call(vaultRegistry.address), toWei("100000"));
 
         // Check token registry tokens
         assert.equal(await tokenRegistry.tokenCount.call(), 3);
@@ -50,7 +51,7 @@ contract("Deployment", async accounts => {
 
     let vault;
 
-    it("success: create vault", async () => {
+    it("Success: create vault", async () => {
         let vaultRegistry = await VaultRegistry.deployed();
         await vaultRegistry.createVault();
         let vaultAddress = await vaultRegistry.vault.call(accounts[0], 0);
@@ -58,18 +59,18 @@ contract("Deployment", async accounts => {
         assert.exists(vault);
     });
 
-    it("success: transfer some value", async () => {
-        await web3.eth.sendTransaction({from: accounts[0], to: vault.address, value: web3.utils.toWei("1")});
-        tokenUSDT.transfer(vault.address, web3.utils.toWei("3"), { from: accounts[0] });
-        tokenWETH.transfer(vault.address, web3.utils.toWei("2"), { from: accounts[0] });
-        assert.equal((await vault.totalValue.call()).toString(), web3.utils.toWei("6003"));
+    it("Success: transfer some value", async () => {
+        await web3.eth.sendTransaction({from: accounts[0], to: vault.address, value: toWei("1")});
+        tokenUSDT.transfer(vault.address, toWei("3"), { from: accounts[0] });
+        tokenWETH.transfer(vault.address, toWei("2"), { from: accounts[0] });
+        assert.equal((await vault.totalValue.call()).toString(), toWei("6003"));
     });
 
-    it("success: reward for locking", async () => {
+    it("Success: reward for locking", async () => {
         await vault.lock(2);
-        let reward = new BN(web3.utils.toWei("1000")).divn(5); // 20% max reward = 1000
+        let reward = new BN(toWei("1000")).divn(5); // 20% max reward = 1000
         assert.equal((await vault.rewardValue.call()).toString(), reward.toString());
-        assert.equal((await vaultRegistry.rewardTotal()).toString(), web3.utils.toWei("100000"));
-        assert.equal((await vaultRegistry.rewardAvailable()).toString(), new BN(web3.utils.toWei("100000")).sub(reward).toString());
+        assert.equal((await vaultRegistry.rewardTotal()).toString(), toWei("100000"));
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), new BN(toWei("100000")).sub(reward).toString());
     });
 });
