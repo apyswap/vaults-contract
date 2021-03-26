@@ -121,8 +121,12 @@ contract("VaultRegistry", async accounts => {
         await vaultRegistry.setRewardValue(toWei("50000"));
         assert.equal((await vaultRegistry.rewardTotal()).toString(), toWei("50000"));
         assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("49900"));
-        await Helper.tryCatch(vaultRegistry.setRewardValue(toWei("50"), {from: accounts[1]}), "");
+        await Helper.tryCatch(vaultRegistry.setRewardValue(toWei("50")), "Negative reward");
     });
+
+    it("Fail: setRewardValue not owner", async () => {
+        await Helper.tryCatch(vaultRegistry.setRewardValue(toWei("500000"), {from: accounts[1]}), "Ownable: caller is not the owner");
+    })
 
     it("Success: globalVaultCount and globalVault", async () => {
         await vaultRegistry.setRewardValue( toWei("100000"));

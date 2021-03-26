@@ -15,8 +15,6 @@ import "./Vault.sol";
 
 contract VaultRegistry is Ownable, IVaultRegistry {
     using SafeMath for uint256;
-    using SafeCast for uint256;
-    using SafeCast for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Clones for address;
@@ -80,9 +78,13 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     }
 
     function setRewardValue(uint256 amount) external onlyOwner {
-        int256 diff = amount.toInt256() - rewardTotal.toInt256();
+        if (amount >= rewardTotal) {
+            rewardAvailable = rewardAvailable.add(amount.sub(rewardTotal));
+        } else {
+            require(rewardTotal.sub(amount) < rewardAvailable, 'Negative reward');
+            rewardAvailable = rewardAvailable.sub(rewardTotal.sub(amount));
+        }
         rewardTotal = amount;
-        rewardAvailable = (rewardAvailable.toInt256() + diff).toUint256();
     }
 
     function subReward(uint256 amount) external override onlyVault {
