@@ -132,4 +132,21 @@ contract("VaultRegistry", async accounts => {
         const globalVault = await vaultRegistry.globalVault(0);
         assert.equal(globalVault, vaultAddress);
     });
+
+    it("Success: update maxLockedValue", async () => {
+        await vaultRegistry.setRewardValue( web3.utils.toWei("100000"));
+        assert.equal((await vaultRegistry.maxLockedValue()).toString(), web3.utils.toWei("1000"));
+        await vaultRegistry.setMaxLockedValue(web3.utils.toWei("100"));
+        assert.equal((await vaultRegistry.maxLockedValue()).toString(), web3.utils.toWei("100"));
+        await vaultRegistry.createVault({from: accounts[1]});
+        const vaultAddress = await vaultRegistry.vault(accounts[1], 0);
+        const vault = await Vault.at(vaultAddress);
+        tokenUSDT.transfer(vault.address, web3.utils.toWei("1000"));
+        await vault.lock(1, {from: accounts[1]});
+        expect((await vault.rewardValue()).toString(), web3.utils.toWei("10"))
+    });
+
+    it("Fail: update maxLockedValue not owner", async () => {
+        await Helper.tryCatch(vaultRegistry.setMaxLockedValue(web3.utils.toWei("1000"), {from: accounts[1]}), "Ownable: caller is not the owner");
+    })
 });

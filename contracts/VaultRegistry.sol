@@ -21,6 +21,8 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     using SafeERC20 for IERC20;
     using Clones for address;
 
+    uint256 private _maxLockedValue = 1000 ether; // Actually it is 1000 USDT
+
     LockInfo[] private _lockInfo;
 
     ITokenRegistry public tokenRegistry;
@@ -113,6 +115,14 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     function lockInfo(uint256 index) external override view returns (LockInfo memory) {
         return _lockInfo[index];
+    }
+
+    function maxLockedValue() external override view returns (uint256) {
+        return _maxLockedValue;
+    }
+
+    function setMaxLockedValue(uint256 value) external onlyOwner {
+        _maxLockedValue = value;
     }
 
     function updateOwnership(address sender, address recipient) external override onlyVault {

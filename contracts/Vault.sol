@@ -27,7 +27,6 @@ contract Vault is IERC20, Initializable {
     mapping(address => uint256) private _accountShare;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    uint256 constant private MAX_LOCKED_VALUE = 1000 ether; // Actually it is 1000 USDT
     uint256 constant private TOTAL_SHARE = 1 ether;
     uint256 constant private EMERGENCY_INTERVAL = 100 days;
 
@@ -129,9 +128,10 @@ contract Vault is IERC20, Initializable {
 
     function lock(uint256 lockTypeId) external neverlocked shareOwner {
         LockInfo memory lockInfo = _vaultRegistry.lockInfo(lockTypeId);
+        uint256 maxLockedValue = _vaultRegistry.maxLockedValue();
         lockedSince = block.timestamp;
         lockedUntil = block.timestamp + lockInfo.interval;
-        lockedValue = Math.min(_totalValue(), MAX_LOCKED_VALUE);
+        lockedValue = Math.min(_totalValue(), maxLockedValue);
         rewardValue = lockedValue.mul(lockInfo.reward).div(100);
         _vaultRegistry.subReward(rewardValue);
     }

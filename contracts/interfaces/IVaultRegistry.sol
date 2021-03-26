@@ -23,4 +23,6 @@ interface IVaultRegistry {
     function updateOwnership(address sender, address recipient) external;
     function sendReward(address user, uint256 value) external;
     function subReward(uint256 amount) external;
+
+    function maxLockedValue() external view returns (uint256);
 }
