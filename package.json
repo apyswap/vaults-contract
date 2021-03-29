@@ -13,7 +13,8 @@
     "@truffle/contract": "^4.3.7",
     "@truffle/hdwallet-provider": "^1.2.2",
     "@uniswap/v2-core": "^1.0.1",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "truffle-assertions": "^0.9.2"
   },
   "devDependencies": {
     "@typechain/truffle-v5": "^4.0.1",
@@ -22,8 +23,7 @@
   "scripts": {
     "test": "truffle test test/deployment.js && truffle test test/simple_value_oracle.js && truffle test test/token_registry.js && truffle test test/uniswap_value_oracle.js && truffle test test/vault.js && truffle test test/vault_registry.js",
     "build": "truffle build",
-    "generate-types":  "typechain --target truffle-v5 --outDir types './build/contracts/*.json'"
-
+    "generate-types": "typechain --target truffle-v5 --outDir types './build/contracts/*.json'"
   },
   "repository": {
     "type": "git",
