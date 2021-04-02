@@ -69,11 +69,11 @@ contract("Vault", async accounts => {
     assert.equal((await vault.totalValue()).toString(), toWei("62")); // (1 * 7) + 16 + (5 * 7) + (8 / 2) = 62
 
     // lock
-    await vault.lock("1", {from: user1});
+    const tx = await vault.lock("1", {from: user1});
+    Helper.assertLockedEvent(tx, {account: user1, interval: 5 * 60, lockedValue: toWei("62"), rewardValue: toWei("6.2")})
     const blocktime = await time.latest();
     assert.equal((await vault.lockedSince()).toString(), blocktime);
     assert.equal((await vault.lockedUntil()).toString(), (+blocktime + 5 * 60).toString());
-    assert.equal((await vault.lockedValue()).toString(), toWei("62"));
     assert.equal((await vault.rewardValue()).toString(), toWei("6.2")); // 62 * 10% = 6.2
     assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99993.8")); // 10000 - 6.2 = 99993.8
 
@@ -92,6 +92,7 @@ contract("Vault", async accounts => {
 
     // withdraw user 2
     const withdraw2Tx = await vault.withdraw({from: user2});
+    Helper.assertWithdrawnEvent(withdraw2Tx, user2, toWei("0.4"));
     const gasPrice = await web3.eth.getGasPrice();
 
     assert.equal((await vault.balanceOf(user2)).toString(), toWei("0"));
@@ -108,6 +109,7 @@ contract("Vault", async accounts => {
 
     // withdraw user 1
     const withdraw1Tx = await vault.withdraw({from: user1});
+    Helper.assertWithdrawnEvent(withdraw1Tx, user1, toWei("0.6"));
     const fee1 = new BN(gasPrice).mul(new BN(withdraw1Tx.receipt.gasUsed));
     assert.equal((await vault.balanceOf(user1)), toWei("0"));
     assert.equal((await tokenReward.balanceOf(user1)), toWei("12.24")); // (6.2 * 0.6) * 2 + (8 * 0.6) = 11.52
@@ -145,7 +147,6 @@ contract("Vault", async accounts => {
 
   it("Success: lock zero amount", async () => {
     await vault.lock("0", {from: user1});
-    assert.equal((await vault.lockedValue()).toString(), toWei("0"));
     assert.equal((await vault.rewardValue()).toString(), toWei("0"));
     assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("100000"));
     await time.increase(61);
@@ -169,7 +170,6 @@ contract("Vault", async accounts => {
   it("Success: max locked value", async () => {
     await tokenWETH.transfer(vault.address, toWei("150"));
     await vault.lock("1", {from: user1});
-    assert.equal((await vault.lockedValue()).toString(), toWei("1000"));
     assert.equal((await vault.rewardValue()).toString(), toWei("100"));
     assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99900"));
   });
@@ -177,11 +177,10 @@ contract("Vault", async accounts => {
   it("Success: unlock", async () => {
     await tokenWETH.transfer(vault.address, toWei("10"));
     await vault.lock("1", {from: user1});
-    assert.equal((await vault.lockedValue()).toString(), toWei("70"));
     assert.equal((await vault.rewardValue()).toString(), toWei("7"));
     assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99993"));
-    await vault.unlock({from: user1});
-    assert.equal((await vault.lockedValue()).toString(), toWei("70"));
+    const tx = await vault.unlock({from: user1});
+    Helper.assertUnlockedEvent(tx, user1);
     assert.equal((await vault.rewardValue()).toString(), toWei("0"));
     assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("99993"));
     await vault.withdraw({from: user1});

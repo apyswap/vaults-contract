@@ -38,6 +38,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     mapping(address => EnumerableSet.AddressSet) private _accountVaults;
 
     event VaultCreated(address indexed vaultAddress);
+    event RewardSent(address to, uint256 value);
 
     constructor(ITokenRegistry tokenRegistry_, address vaultLogic_, uint256 startTime_, uint256 finishTime_) public {
 
@@ -143,6 +144,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     function sendReward(address user, uint256 value) external override onlyVault {
         uint256 tokenAmount = tokenRegistry.valueToTokens(address(tokenReward), value);
         tokenReward.safeTransfer(user, tokenAmount);
+        emit RewardSent(user, tokenAmount);
     }
 
     function manager() external override view returns (address) {
