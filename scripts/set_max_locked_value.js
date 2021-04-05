@@ -6,14 +6,14 @@ module.exports = async (callback) => {
   try {
     const len = process.argv.length;
     const vaultRegistryAddress = process.argv[len - 2];
-    const rewardTokenAddress = process.argv[len - 1];
+    const maxLockedValue = process.argv[len - 1]; // IN USDT
 
     const vaultRegistry = await VaultRegistry.at(vaultRegistryAddress);
 
-    console.log(`Set APYS (${rewardTokenAddress}) as reward token for ${vaultRegistryAddress}`)
+    console.log(`Set max locked value to ${maxLockedValue} USDT for ${vaultRegistryAddress} contract`)
     await pressAnyKey();
 
-    await vaultRegistry.setReward(rewardTokenAddress);
+    await vaultRegistry.setMaxLockedValue(web3.utils.toWei(maxLockedValue));
   } catch (e) {
     console.error(e);
   }

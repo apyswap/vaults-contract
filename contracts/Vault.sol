@@ -69,6 +69,18 @@ contract Vault is IERC20, Initializable {
 
     receive() external payable {}
 
+    function name() public pure returns (string memory) {
+        return "Vault";
+    }
+
+    function symbol() public pure returns (string memory) {
+        return "SHARE";
+    }
+
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
     function totalSupply() external override view returns (uint256) {
         return _totalSupply;
     }

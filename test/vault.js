@@ -194,4 +194,16 @@ contract("Vault", async accounts => {
     await Helper.tryCatch(vault.unlock({from: user1}), "!share owner");
   });
 
+  it("Success: get token name", async () => {
+    assert.equal(await vault.name(), "Vault");
+  })
+
+  it("Success: get token symbol", async () => {
+    assert.equal(await vault.symbol(), "SHARE");
+  })
+
+  it("Success: get token decimals", async () => {
+    assert.equal((await vault.decimals()).toString(), "18");
+  })
+
 });
