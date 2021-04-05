@@ -28,6 +28,17 @@ module.exports = {
       gas: 2000000,
       gasPrice: 150e9,
       network_id: 1
+    },
+    bsc: {
+      provider: function() {
+        return new HDWalletProvider({
+          privateKeys: [process.env.BSC_PK], 
+          providerOrUrl: 'https://bsc-dataseed.binance.org'
+          });
+      },
+      gas: 2000000,
+      gasPrice: 10e9,
+      network_id: '56', // eslint-disable-line camelcase
     }
   },
   compilers: {
