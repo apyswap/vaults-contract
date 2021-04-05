@@ -133,7 +133,7 @@ contract Vault is IERC20, Initializable {
         uint256 lockedValue = Math.min(_totalValue(), maxLockedValue);
         uint256 _rewardValue = lockedValue.mul(lockInfo.reward).div(100);
         uint256 _rewardAvailable = _vaultRegistry.rewardAvailable();
-        rewardValue = _rewardValue < _rewardAvailable ? _rewardValue : _rewardAvailable;
+        rewardValue = Math.min(_rewardValue, _rewardAvailable);
         _vaultRegistry.subReward(rewardValue);
         emit Locked(msg.sender, lockInfo.interval, lockedValue, rewardValue);
     }
