@@ -20,7 +20,6 @@ contract Vault is IERC20, Initializable {
     ITokenRegistry private _tokenRegistry;
     uint256 public lockedSince;
     uint256 public lockedUntil;
-    uint256 public lockedValue;
     uint256 public rewardValue;
 
     uint256 private _totalSupply;
@@ -32,6 +31,9 @@ contract Vault is IERC20, Initializable {
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Locked(address account, uint256 interval, uint256 lockedValue, uint256 rewardValue);
+    event Unlocked(address account);
+    event Withdrawn(address account, uint256 share);
 
     constructor() public {
         // Empty constructor, use initialize
@@ -49,11 +51,6 @@ contract Vault is IERC20, Initializable {
         _;
     }
 
-    modifier neverlocked() {
-        require(lockedUntil == 0, "!neverlocked");
-        _;
-    }
-
     modifier notLocked() {
         require(lockedUntil < block.timestamp, "locked");
         _;
@@ -64,7 +61,8 @@ contract Vault is IERC20, Initializable {
         _;
     }
 
-    modifier registryManager() {
+    modifier onlyEmergency() {
+        require(_totalSupply == 0 || block.timestamp > _vaultRegistry.finishTime() + EMERGENCY_INTERVAL, "!emergency");
         require(msg.sender == _vaultRegistry.manager(), "!registry manager");
         _;
     }
@@ -126,14 +124,16 @@ contract Vault is IERC20, Initializable {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function lock(uint256 lockTypeId) external neverlocked shareOwner {
+    function lock(uint256 lockTypeId) external shareOwner {
+        require(lockedUntil == 0, "!neverlocked");
         LockInfo memory lockInfo = _vaultRegistry.lockInfo(lockTypeId);
         uint256 maxLockedValue = _vaultRegistry.maxLockedValue();
         lockedSince = block.timestamp;
         lockedUntil = block.timestamp + lockInfo.interval;
-        lockedValue = Math.min(_totalValue(), maxLockedValue);
+        uint256 lockedValue = Math.min(_totalValue(), maxLockedValue);
         rewardValue = lockedValue.mul(lockInfo.reward).div(100);
         _vaultRegistry.subReward(rewardValue);
+        emit Locked(msg.sender, lockInfo.interval, lockedValue, rewardValue);
     }
 
     // Emergency unlock, all liquidity is instantly withdrawable, but reward is lost
@@ -141,6 +141,7 @@ contract Vault is IERC20, Initializable {
         // Mark unlocked
         lockedUntil = block.timestamp - 1;
         rewardValue = 0;
+        emit Unlocked(msg.sender);
     }
 
     // Withdraw tokens according to the user's share, burn ownership token
@@ -153,7 +154,10 @@ contract Vault is IERC20, Initializable {
         _burn(msg.sender, share);
 
         // Transfer ETH
-        _safeEthWithdraw(msg.sender, _calculateShareBalanceAfterBurn(share, address(this).balance));
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance > 0) {
+            _safeEthWithdraw(msg.sender, _calculateShareBalanceAfterBurn(share, ethBalance));
+        }
 
         // Transfer tokens
         // Number of tokens is controlled by the TokenRegistry owner be careful not to increase it, otherwise this transaction can fail
@@ -161,22 +165,26 @@ contract Vault is IERC20, Initializable {
         while (index > 0) {
             index -= 1;
             IERC20 tokenContract = IERC20(_tokenRegistry.tokenAddress(index));
-            tokenContract.safeTransfer(msg.sender, _calculateShareBalanceAfterBurn(share, tokenContract.balanceOf(address(this))));
+            uint256 tokenBalance = tokenContract.balanceOf(address(this));
+            if (tokenBalance > 0) {
+                tokenContract.safeTransfer(msg.sender, _calculateShareBalanceAfterBurn(share, tokenBalance));
+            }
         }
 
         // Transfer reward tokens
-        uint256 amount = _calculateShareBalanceAfterBurn(share, rewardValue);
-        rewardValue = rewardValue.sub(amount);
-        _vaultRegistry.sendReward(msg.sender, amount);
+        if (rewardValue > 0) {
+            uint256 amount = _calculateShareBalanceAfterBurn(share, rewardValue);
+            rewardValue = rewardValue.sub(amount);
+            _vaultRegistry.sendReward(msg.sender, amount);
+        }
+        emit Withdrawn(msg.sender, share);
     }
 
-    function emergencyEthWithdraw(uint256 amount) external registryManager {
-        require(_totalSupply == 0 || block.timestamp > _vaultRegistry.finishTime() + EMERGENCY_INTERVAL, "!emergency");
+    function emergencyEthWithdraw(uint256 amount) external onlyEmergency {
         _safeEthWithdraw(msg.sender, amount);
     }
 
-    function emergencyWithdraw(address token, uint256 amount) external registryManager {
-        require(_totalSupply == 0 || block.timestamp > _vaultRegistry.finishTime() + EMERGENCY_INTERVAL, "!emergency");
+    function emergencyWithdraw(address token, uint256 amount) external onlyEmergency {
         IERC20 tokenContract = IERC20(token);
         tokenContract.safeTransfer(msg.sender, amount);
     }

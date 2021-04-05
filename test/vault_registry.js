@@ -47,9 +47,10 @@ contract("VaultRegistry", async accounts => {
     });
 
     it("Success: create vault", async () => {
-        await vaultRegistry.createVault();
+        const tx = await vaultRegistry.createVault();
         assert.equal(await vaultRegistry.vaultCount.call(accounts[0]), 1);
         const vaultAddress = await vaultRegistry.vault(accounts[0], 0);
+        Helper.assertVaultCreatedEvent(tx, vaultAddress);
         assert.isDefined(vaultAddress);
         const vault = await Vault.at(vaultAddress);
         assert.equal((await vault.balanceOf(accounts[0])).toString(), toWei("1"))
