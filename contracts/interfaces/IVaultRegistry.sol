@@ -14,6 +14,7 @@ interface IVaultRegistry {
     function manager() external view returns (address);
 
     function tokenReward() external view returns (IERC20);
+    function rewardAvailable() external view returns (uint256);
     function startTime() external view returns (uint256);
     function finishTime() external view returns (uint256);
 
