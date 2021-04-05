@@ -21,7 +21,6 @@ contract TokenRegistry is ITokenRegistry, Ownable {
 
     address private _tokenUSDT;
     address private _tokenWETH;
-    address private _tokenReward;
 
     function USDT() external override view returns (address) { return _tokenUSDT; }
     function WETH() external override view returns (address) { return _tokenWETH; }
