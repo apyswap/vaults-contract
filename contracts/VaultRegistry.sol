@@ -29,7 +29,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
 
     IERC20 public override tokenReward;
     uint256 public rewardTotal;
-    uint256 public rewardAvailable;
+    uint256 public override rewardAvailable;
 
     uint256 public override startTime;
     uint256 public override finishTime;

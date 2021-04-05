@@ -125,6 +125,33 @@ contract("VaultRegistry", async accounts => {
         await Helper.tryCatch(vaultRegistry.setRewardValue(toWei("50")), "Negative reward");
     });
 
+    it('Success: lock on small rewardAvailable', async () => {
+        await vaultRegistry.setRewardValue(toWei("50"));
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("50"));
+
+        await vaultRegistry.createVault({from: accounts[1]});
+        const vaultAddress = await vaultRegistry.vault(accounts[1], 0);
+        const vault = await Vault.at(vaultAddress);
+        tokenUSDT.transfer(vault.address, toWei("1000"));
+        await vault.lock(1, {from: accounts[1]});
+
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), "0");
+        assert.equal((await vault.rewardValue()).toString(), toWei("50"));
+    });
+
+    it('Success: lock on zero rewardAvailable', async () => {
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), toWei("0"));
+
+        await vaultRegistry.createVault({from: accounts[1]});
+        const vaultAddress = await vaultRegistry.vault(accounts[1], 0);
+        const vault = await Vault.at(vaultAddress);
+        tokenUSDT.transfer(vault.address, toWei("1000"));
+        await vault.lock(1, {from: accounts[1]});
+
+        assert.equal((await vaultRegistry.rewardAvailable()).toString(), "0");
+        assert.equal((await vault.rewardValue()).toString(), toWei("0"));
+    });
+
     it("Fail: setRewardValue not owner", async () => {
         await Helper.tryCatch(vaultRegistry.setRewardValue(toWei("500000"), {from: accounts[1]}), "Ownable: caller is not the owner");
     })
