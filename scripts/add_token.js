@@ -1,4 +1,5 @@
 const TokenRegistry = artifacts.require("TokenRegistry");
+const { pressAnyKey } = require('./_utils.js');
 
 
 module.exports = async (callback) => {
@@ -9,6 +10,10 @@ module.exports = async (callback) => {
     const isStable = process.argv[len - 1] === 'true';
 
     const tokenRegistry = await TokenRegistry.at(tokenRegistryAddress);
+
+    console.log(`Add ${isStable ? '' : 'not '}stable token ${tokenAddress} to token registry ${tokenRegistryAddress}`)
+    await pressAnyKey();
+
     await tokenRegistry.addToken(tokenAddress, isStable);
   } catch (e) {
     console.error(e);
