@@ -26,11 +26,11 @@ module.exports = async function (deployer, network, accounts) {
 
   const useSimpleValueOracle = (deployer.network.startsWith("goerli"));
   const localTestnet = (deployer.network == "ganache" || deployer.network == "development");
-  const mainnet = (deployer.network == "mainnet");
+  const prod = (deployer.network == "mainnet" || deployer.network == "bsc");
 
   // Set up main currencies/tokens
   let tokenUSDTAddress, tokenWETHAddress, tokenRewardAddress;
-  if (!mainnet) {
+  if (!prod) {
     await deployer.deploy(USDT);
     await deployer.deploy(WETH);
     await deployer.deploy(RewardToken);
@@ -38,10 +38,18 @@ module.exports = async function (deployer, network, accounts) {
     tokenWETHAddress = (await WETH.deployed()).address;
     tokenRewardAddress = (await RewardToken.deployed()).address;
   } else {
-    tokenUSDTAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
-    tokenWETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-    tokenRewardAddress = "" //TODO ;
+    if (deployer.network == "mainnet") {
+      tokenUSDTAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+      tokenWETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+      tokenRewardAddress = "0xf7413489c474ca4399eeE604716c72879Eea3615";  // APYS
+    } else if (deployer.network == "bsc") {
+      tokenUSDTAddress = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";    // BUSD
+      tokenWETHAddress = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";    // WBNB
+      tokenRewardAddress = "0x37dfacfaeda801437ff648a1559d73f4c40aacb7";  // APYS Wrapped
+    }
   }
+
+  console.log(`Params:\n- usdt ${tokenUSDTAddress}\n- weth ${tokenWETHAddress}\n- reward ${tokenRewardAddress}`);
 
   let valueOracleAddress;
   if (useSimpleValueOracle) {
@@ -93,8 +101,14 @@ module.exports = async function (deployer, network, accounts) {
 
       await time.increase(5);
     } else {
-      uniswapFactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+      if (deployer.network == "mainnet") {
+        uniswapFactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+      } else if (deployer.network == "bsc") {
+        uniswapFactoryAddress = "0xBCfCcbde45cE874adCB698cC183deBcF17952812";  // Pancake
+      }
     }
+
+    console.log(`Oracle:\n- uniswap ${uniswapFactoryAddress}`);
 
     await deployer.deploy(UniswapValueOracle, uniswapFactoryAddress, tokenUSDTAddress);
     valueOracleAddress = (await UniswapValueOracle.deployed()).address;
@@ -109,7 +123,7 @@ module.exports = async function (deployer, network, accounts) {
   await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
   const vaultRegistry = await VaultRegistry.deployed();
 
-  if (!mainnet) {  // Add test lock intervals
+  if (!prod) {  // Add test lock intervals
     await vaultRegistry.addLock(1 * 60, 0);
     await vaultRegistry.addLock(5 * 60, 10);
     await vaultRegistry.addLock(10 * 60, 20);
@@ -127,7 +141,7 @@ module.exports = async function (deployer, network, accounts) {
   }
 
   // Configure reward tokens
-  if (!mainnet) {
+  if (!prod) {
     let tokenReward = await RewardToken.deployed();
     let amount = web3.utils.toWei("100000");
     let vaultRegistry = await VaultRegistry.deployed();
