@@ -25,7 +25,7 @@ module.exports = {
           providerOrUrl: 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY
           });
       },
-      gas: 2000000,
+      gas: 5000000,
       gasPrice: 150e9,
       network_id: 1
     },
@@ -36,7 +36,7 @@ module.exports = {
           providerOrUrl: 'https://bsc-dataseed.binance.org'
           });
       },
-      gas: 2000000,
+      gas: 5000000,
       gasPrice: 10e9,
       network_id: '56', // eslint-disable-line camelcase
     }

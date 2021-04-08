@@ -19,7 +19,7 @@ contract VaultRegistry is Ownable, IVaultRegistry {
     using SafeERC20 for IERC20;
     using Clones for address;
 
-    uint256 private _maxLockedValue = 1000 ether; // Actually it is 1000 USDT
+    uint256 private _maxLockedValue = 10000 ether; // Actually it is 10000 USDT
 
     LockInfo[] private _lockInfo;
 

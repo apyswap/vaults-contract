@@ -26,7 +26,9 @@ module.exports = async function (deployer, network, accounts) {
 
   const useSimpleValueOracle = (deployer.network.startsWith("goerli"));
   const localTestnet = (deployer.network == "ganache" || deployer.network == "development");
-  const prod = (deployer.network == "mainnet" || deployer.network == "bsc");
+  const mainnet = deployer.network.startsWith('mainnet');
+  const bsc = deployer.network.startsWith('bsc');
+  const prod = (mainnet || bsc);
 
   // Set up main currencies/tokens
   let tokenUSDTAddress, tokenWETHAddress, tokenRewardAddress;
@@ -38,11 +40,11 @@ module.exports = async function (deployer, network, accounts) {
     tokenWETHAddress = (await WETH.deployed()).address;
     tokenRewardAddress = (await RewardToken.deployed()).address;
   } else {
-    if (deployer.network == "mainnet") {
+    if (mainnet) {
       tokenUSDTAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
       tokenWETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
       tokenRewardAddress = "0xf7413489c474ca4399eeE604716c72879Eea3615";  // APYS
-    } else if (deployer.network == "bsc") {
+    } else if (bsc) {
       tokenUSDTAddress = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";    // BUSD
       tokenWETHAddress = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";    // WBNB
       tokenRewardAddress = "0x37dfacfaeda801437ff648a1559d73f4c40aacb7";  // APYS Wrapped
@@ -101,9 +103,9 @@ module.exports = async function (deployer, network, accounts) {
 
       await time.increase(5);
     } else {
-      if (deployer.network == "mainnet") {
+      if (mainnet) {
         uniswapFactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
-      } else if (deployer.network == "bsc") {
+      } else if (bsc) {
         uniswapFactoryAddress = "0xBCfCcbde45cE874adCB698cC183deBcF17952812";  // Pancake
       }
     }
@@ -120,7 +122,14 @@ module.exports = async function (deployer, network, accounts) {
   const tokenRegistry = await TokenRegistry.deployed();
   await tokenRegistry.addToken(tokenRewardAddress, false);
   const vault = await Vault.deployed();
-  await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, 0, "" + Number.MAX_SAFE_INTEGER);
+  let timeStart = 0;
+  let timeEnd = 0;
+  if (bsc) {
+    timeStart = 1617642000;
+    timeEnd = 1619888400;
+  }
+  console.log(`Params:\n- timeStart ${new Date(timeStart * 1000).toISOString()}\n- timeEnd ${new Date(timeEnd * 1000).toISOString()}`);
+  await deployer.deploy(VaultRegistry, tokenRegistry.address, vault.address, timeStart, timeEnd);
   const vaultRegistry = await VaultRegistry.deployed();
 
   if (!prod) {  // Add test lock intervals
